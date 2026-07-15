@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { iniciarSesion } from '../lib/cuenta';
+import CampoPassword from './CampoPassword';
 
 interface Props {
   onAcceso: () => void;
@@ -11,6 +12,7 @@ interface Props {
 export default function IniciarSesion({ onAcceso, onVolver, onIrARegistro, onOlvideContrasena }: Props) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [recordar, setRecordar] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [verificando, setVerificando] = useState(false);
 
@@ -19,7 +21,7 @@ export default function IniciarSesion({ onAcceso, onVolver, onIrARegistro, onOlv
     setError(null);
     setVerificando(true);
     try {
-      await iniciarSesion(email.trim(), password);
+      await iniciarSesion(email.trim(), password, recordar);
       onAcceso();
     } catch (err) {
       setError(
@@ -62,15 +64,17 @@ export default function IniciarSesion({ onAcceso, onVolver, onIrARegistro, onOlv
           <label className="mb-1 block text-sm text-slate-600" htmlFor="password">
             Contraseña
           </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-          />
+          <CampoPassword id="password" value={password} onChange={setPassword} required autoComplete="current-password" />
         </div>
+        <label className="flex items-center gap-2 text-sm text-slate-600">
+          <input
+            type="checkbox"
+            checked={recordar}
+            onChange={(e) => setRecordar(e.target.checked)}
+            className="h-4 w-4"
+          />
+          Recordarme en este dispositivo
+        </label>
         <button
           type="submit"
           disabled={verificando}

@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, establecerRecordar } from './supabase';
 import type { Corredor } from './types';
 
 export interface DatosRegistro {
@@ -27,7 +27,8 @@ export async function registrarCorredor(datos: DatosRegistro): Promise<{ sesionA
   return { sesionActiva: data.session !== null };
 }
 
-export async function iniciarSesion(email: string, password: string): Promise<void> {
+export async function iniciarSesion(email: string, password: string, recordar = true): Promise<void> {
+  establecerRecordar(recordar);
   const { error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
 }

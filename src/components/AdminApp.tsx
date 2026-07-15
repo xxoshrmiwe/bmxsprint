@@ -2,8 +2,10 @@ import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { iniciarSesion, cerrarSesion } from '../lib/cuenta';
 import { obtenerDatosAdmin, enviarRecuperacion, type DatosAdmin } from '../lib/adminApi';
+import CampoPassword from './CampoPassword';
+import OlvideContrasena from './OlvideContrasena';
 
-type Vista = 'cargando' | 'login' | 'sin-acceso' | 'dashboard';
+type Vista = 'cargando' | 'login' | 'olvide-password' | 'sin-acceso' | 'dashboard';
 
 function formatearFecha(valor: string | number | null): string {
   if (!valor) return '—';
@@ -18,6 +20,7 @@ export default function AdminApp() {
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [recordar, setRecordar] = useState(true);
   const [entrando, setEntrando] = useState(false);
 
   const [estadoRecuperacion, setEstadoRecuperacion] = useState<Record<string, 'enviando' | 'enviado' | 'error'>>({});
@@ -44,7 +47,7 @@ export default function AdminApp() {
     setError(null);
     setEntrando(true);
     try {
-      await iniciarSesion(email.trim(), password);
+      await iniciarSesion(email.trim(), password, recordar);
       await cargarDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión.');
@@ -99,15 +102,17 @@ export default function AdminApp() {
             <label className="mb-1 block text-sm text-slate-600" htmlFor="password">
               Contraseña
             </label>
-            <input
-              id="password"
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-            />
+            <CampoPassword id="password" value={password} onChange={setPassword} required autoComplete="current-password" />
           </div>
+          <label className="flex items-center gap-2 text-sm text-slate-600">
+            <input
+              type="checkbox"
+              checked={recordar}
+              onChange={(e) => setRecordar(e.target.checked)}
+              className="h-4 w-4"
+            />
+            Recordarme en este dispositivo
+          </label>
           <button
             type="submit"
             disabled={entrando}
@@ -116,8 +121,19 @@ export default function AdminApp() {
             {entrando ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
+
+        <button
+          onClick={() => setVista('olvide-password')}
+          className="w-full text-center text-sm text-slate-500 hover:text-slate-700"
+        >
+          ¿Olvidaste tu contraseña?
+        </button>
       </div>
     );
+  }
+
+  if (vista === 'olvide-password') {
+    return <OlvideContrasena onVolver={() => setVista('login')} />;
   }
 
   if (vista === 'sin-acceso') {

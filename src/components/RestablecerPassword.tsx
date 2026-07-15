@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { actualizarPassword } from '../lib/cuenta';
+import CampoPassword from './CampoPassword';
 
 export default function RestablecerPassword() {
   const [listo, setListo] = useState(false);
@@ -110,28 +111,20 @@ export default function RestablecerPassword() {
           <label className="mb-1 block text-sm text-slate-600" htmlFor="password">
             Nueva contraseña
           </label>
-          <input
+          <CampoPassword
             id="password"
-            type="password"
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={setPassword}
             required
             autoFocus
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
+            autoComplete="new-password"
           />
         </div>
         <div>
           <label className="mb-1 block text-sm text-slate-600" htmlFor="confirmar">
             Confirmar contraseña
           </label>
-          <input
-            id="confirmar"
-            type="password"
-            value={confirmar}
-            onChange={(e) => setConfirmar(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-          />
+          <CampoPassword id="confirmar" value={confirmar} onChange={setConfirmar} required autoComplete="new-password" />
         </div>
         <button
           type="submit"

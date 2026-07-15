@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { registrarCorredor } from '../lib/cuenta';
+import CampoPassword from './CampoPassword';
 
 interface Props {
   onRegistrado: (opciones: { sesionActiva: boolean; email: string }) => void;
@@ -125,27 +126,13 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
           <label className="mb-1 block text-sm text-slate-600" htmlFor="password">
             Contraseña
           </label>
-          <input
-            id="password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-          />
+          <CampoPassword id="password" value={password} onChange={setPassword} required autoComplete="new-password" />
         </div>
         <div>
           <label className="mb-1 block text-sm text-slate-600" htmlFor="confirmar">
             Confirmar contraseña
           </label>
-          <input
-            id="confirmar"
-            type="password"
-            value={confirmar}
-            onChange={(e) => setConfirmar(e.target.value)}
-            required
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-          />
+          <CampoPassword id="confirmar" value={confirmar} onChange={setConfirmar} required autoComplete="new-password" />
         </div>
         <button
           type="submit"
