@@ -11,6 +11,10 @@ interface Props {
 
 type Estado = 'listo' | 'reproduciendo' | 'corriendo' | 'detenido';
 
+// El cronómetro arranca este tanto antes de que el audio termine de sonar,
+// para compensar la cola de silencio/reverb que queda después del "drop" real.
+const ANTICIPO_MS = 2000;
+
 function formatearTiempo(ms: number): string {
   const totalCentesimas = Math.round(ms / 10);
   const centesimas = totalCentesimas % 100;
@@ -44,10 +48,13 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const inicioRef = useRef<number>(0);
   const rafRef = useRef<number | null>(null);
+  const anticipoRef = useRef<number | null>(null);
+  const iniciadoRef = useRef(false);
 
   useEffect(() => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
+      if (anticipoRef.current) clearTimeout(anticipoRef.current);
     };
   }, []);
 
@@ -59,8 +66,18 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     rafRef.current = requestAnimationFrame(tick);
   }
 
+  function iniciarCronometro() {
+    if (iniciadoRef.current) return;
+    iniciadoRef.current = true;
+    if (anticipoRef.current) clearTimeout(anticipoRef.current);
+    inicioRef.current = performance.now();
+    setEstado('corriendo');
+    iniciarLoop();
+  }
+
   function reproducirSalida() {
     setError(null);
+    iniciadoRef.current = false;
     try {
       const elegido = elegirClipAleatorio();
       setClip(elegido);
@@ -71,19 +88,24 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       if (!audio) return;
       audio.src = elegido.url;
       audio.load();
-      audio.play().catch((err) => {
-        setError('No se pudo reproducir el audio: ' + err.message);
-        setEstado('listo');
-      });
+      audio
+        .play()
+        .then(() => {
+          const duracionMs = Number.isFinite(audio.duration) ? audio.duration * 1000 : 0;
+          const esperaMs = Math.max(0, duracionMs - ANTICIPO_MS);
+          anticipoRef.current = window.setTimeout(iniciarCronometro, esperaMs);
+        })
+        .catch((err) => {
+          setError('No se pudo reproducir el audio: ' + err.message);
+          setEstado('listo');
+        });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
     }
   }
 
   function handleAudioEnded() {
-    inicioRef.current = performance.now();
-    setEstado('corriendo');
-    iniciarLoop();
+    iniciarCronometro();
   }
 
   function detener() {

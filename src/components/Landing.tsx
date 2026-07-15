@@ -15,8 +15,13 @@ const CARACTERISTICAS = [
 export default function Landing({ onIniciar }: Props) {
   return (
     <div className="mx-auto max-w-md space-y-8 p-6 text-center sm:max-w-lg">
-      <div className="space-y-2">
-        <img src="/logo-gateright-256.png" alt="GATERIGHT BMX" className="mx-auto h-32 w-32" width={256} height={256} />
+      <div className="space-y-2 text-left">
+        <div className="flex items-center gap-3">
+          <img src="/logo-gateright-256.png" alt="GATERIGHT BMX" className="h-12 w-12 shrink-0" width={256} height={256} />
+          <h1 className="font-heading text-2xl font-bold uppercase leading-none text-primary">
+            Gate<span className="text-accent">right</span> BMX
+          </h1>
+        </div>
         <p className="text-muted-foreground">Cronómetro de gate para entrenamientos de BMX Racing</p>
       </div>
 
