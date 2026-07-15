@@ -16,9 +16,7 @@ export default function Landing({ onIniciar }: Props) {
   return (
     <div className="mx-auto max-w-md space-y-8 p-6 text-center sm:max-w-lg">
       <div className="space-y-2">
-        <h1 className="text-4xl font-bold uppercase text-primary">
-          Sprints <span className="text-accent">BMX</span>
-        </h1>
+        <img src="/logo-gateright-256.png" alt="GATERIGHT BMX" className="mx-auto h-32 w-32" width={256} height={256} />
         <p className="text-muted-foreground">Cronómetro de gate para entrenamientos de BMX Racing</p>
       </div>
 

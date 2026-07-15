@@ -1,4 +1,4 @@
-# Sprints BMX
+# GATERIGHT BMX
 
 Cronómetro de gate para entrenamientos de BMX Racing: registra corredores, arranca un nuevo entrenamiento indicando la distancia del sprint, hace (o salta) un calentamiento, reproduce un audio de salida al azar y mide el tiempo desde el "gate drop" hasta que detienes manualmente.
 
@@ -35,7 +35,7 @@ En **Authentication → Email Templates** de Supabase están las plantillas que 
 - **Confirm signup** → es el correo de bienvenida que recibe cada corredor al registrarse.
 - **Reset password** → es el correo que recibe al pedir "¿Olvidaste tu contraseña?".
 
-Podés editar el asunto y el HTML de cada una para que suene más a "Sprints BMX" en vez del texto genérico de Supabase.
+Podés editar el asunto y el HTML de cada una para que suene más a "GATERIGHT BMX" en vez del texto genérico de Supabase.
 
 > **Límite del plan gratis:** Supabase usa un SMTP propio para el plan gratuito con un límite bajo de correos por hora (pensado para pruebas). Para uso real con varias familias, conviene configurar un SMTP propio (ej. Resend, gratis hasta 3,000 correos/mes) en **Settings → Auth → SMTP Settings**.
 

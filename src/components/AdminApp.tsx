@@ -80,7 +80,7 @@ export default function AdminApp() {
   if (vista === 'login') {
     return (
       <div className="mx-auto max-w-sm space-y-6 p-6">
-        <h1 className="text-2xl font-bold text-foreground">Sprints BMX — Admin</h1>
+        <h1 className="text-2xl font-bold text-foreground">GATERIGHT BMX — Admin</h1>
         {error && (
           <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
             <IconoAlerta className="mt-0.5 h-4 w-4 shrink-0" />
@@ -155,7 +155,7 @@ export default function AdminApp() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-foreground">Sprints BMX — Admin</h1>
+        <h1 className="text-2xl font-bold text-foreground">GATERIGHT BMX — Admin</h1>
         <button onClick={handleSalir} className="btn-ghost">
           Cerrar sesión
         </button>

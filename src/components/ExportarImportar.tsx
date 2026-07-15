@@ -36,7 +36,7 @@ export default function ExportarImportar({ corredor, onVolver }: Props) {
       const texto = await archivo.text();
       const backup = JSON.parse(texto) as BackupCorredor;
       if (backup.version !== 2 || !Array.isArray(backup.sesiones)) {
-        throw new Error('El archivo no tiene el formato esperado de respaldo de Sprints BMX.');
+        throw new Error('El archivo no tiene el formato esperado de respaldo de GATERIGHT BMX.');
       }
       await importarCorredor(backup, corredor.id);
       setMensaje(
