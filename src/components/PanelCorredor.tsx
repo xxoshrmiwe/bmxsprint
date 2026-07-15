@@ -1,6 +1,7 @@
 import { cerrarSesion } from '../lib/cuenta';
 import type { Corredor } from '../lib/types';
 import { IconoRayo, IconoGrafico, IconoDescarga } from './Icono';
+import DashboardCorredor from './DashboardCorredor';
 
 interface Props {
   corredor: Corredor;
@@ -23,7 +24,7 @@ export default function PanelCorredor({
   }
 
   return (
-    <div className="mx-auto max-w-md space-y-6 p-4">
+    <div className="mx-auto max-w-2xl space-y-6 p-4">
       <button onClick={handleCerrarSesion} className="btn-ghost">
         ← Cerrar sesión
       </button>
@@ -37,7 +38,9 @@ export default function PanelCorredor({
         )}
       </div>
 
-      <div className="space-y-3">
+      <DashboardCorredor corredor={corredor} />
+
+      <div className="mx-auto max-w-md space-y-3">
         <button onClick={onNuevaSesion} className="btn-primary flex w-full items-center justify-center gap-2 py-4 text-lg">
           <IconoRayo className="h-5 w-5" />
           Nuevo entrenamiento

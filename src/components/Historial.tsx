@@ -1,21 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Corredor, Sesion, Intento } from '../lib/types';
 import { listarSesionesPorCorredor, listarIntentosPorCorredor } from '../lib/db';
+import { formatearTiempo } from '../lib/tiempo';
 
 interface Props {
   corredor: Corredor;
   onVolver: () => void;
-}
-
-function formatearTiempo(ms: number): string {
-  const totalCentesimas = Math.round(ms / 10);
-  const centesimas = totalCentesimas % 100;
-  const totalSeg = Math.floor(totalCentesimas / 100);
-  const seg = totalSeg % 60;
-  const min = Math.floor(totalSeg / 60);
-  const segTxt = min > 0 ? seg.toString().padStart(2, '0') : seg.toString();
-  const prefijo = min > 0 ? `${min}:` : '';
-  return `${prefijo}${segTxt}.${centesimas.toString().padStart(2, '0')}`;
 }
 
 function formatearFecha(ms: number): string {

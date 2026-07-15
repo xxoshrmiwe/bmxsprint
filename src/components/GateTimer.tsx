@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Sesion, Intento } from '../lib/types';
 import { elegirClipAleatorio, type ClipGate } from '../lib/audio';
 import { crearIntento } from '../lib/db';
+import { formatearTiempo } from '../lib/tiempo';
 import { IconoAlerta } from './Icono';
 
 interface Props {
@@ -14,17 +15,6 @@ type Estado = 'listo' | 'reproduciendo' | 'corriendo' | 'detenido';
 // El cronómetro arranca este tanto antes de que el audio termine de sonar,
 // para compensar la cola de silencio/reverb que queda después del "drop" real.
 const ANTICIPO_MS = 2000;
-
-function formatearTiempo(ms: number): string {
-  const totalCentesimas = Math.round(ms / 10);
-  const centesimas = totalCentesimas % 100;
-  const totalSeg = Math.floor(totalCentesimas / 100);
-  const seg = totalSeg % 60;
-  const min = Math.floor(totalSeg / 60);
-  const segTxt = min > 0 ? seg.toString().padStart(2, '0') : seg.toString();
-  const prefijo = min > 0 ? `${min}:` : '';
-  return `${prefijo}${segTxt}.${centesimas.toString().padStart(2, '0')}`;
-}
 
 function LuzSemaforo({ color, activa }: { color: 'red' | 'yellow' | 'green'; activa: boolean }) {
   const bg = color === 'red' ? 'bg-destructive' : color === 'yellow' ? 'bg-warning' : 'bg-accent';

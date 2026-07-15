@@ -75,3 +75,20 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute function public.crear_perfil_corredor();
+
+-- Metas: UNA meta de ritmo por corredor (segundos cada 10 metros), no por
+-- distancia — así sirve sin importar qué distancia entrene ese día. Si ya
+-- corriste este archivo antes, solo hace falta correr desde acá para abajo.
+create table if not exists public.metas (
+  corredor_id uuid primary key references public.corredores (id) on delete cascade,
+  ritmo_objetivo_ms_por_10m double precision not null,
+  creado_en timestamptz not null default now()
+);
+
+alter table public.metas enable row level security;
+
+drop policy if exists "metas: dueño ve/edita sus propias metas" on public.metas;
+create policy "metas: dueño ve/edita sus propias metas"
+  on public.metas for all
+  using (auth.uid() = corredor_id)
+  with check (auth.uid() = corredor_id);

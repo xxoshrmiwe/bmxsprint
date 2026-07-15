@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Sesion, Intento, BackupCorredor } from './types';
+import type { Sesion, Intento, Meta, BackupCorredor } from './types';
 
 export async function crearSesion(datos: {
   corredorId: string;
@@ -114,6 +114,41 @@ function mapIntento(i: any): Intento {
     audioId: i.audio_id,
     tiempoTotalMs: i.tiempo_total_ms,
     creadoEn: new Date(i.creado_en).getTime()
+  };
+}
+
+export async function obtenerMeta(corredorId: string): Promise<Meta | null> {
+  const { data, error } = await supabase
+    .from('metas')
+    .select('*')
+    .eq('corredor_id', corredorId)
+    .maybeSingle();
+
+  if (error || !data) return null;
+
+  return {
+    corredorId: data.corredor_id,
+    ritmoObjetivoMsPor10m: data.ritmo_objetivo_ms_por_10m,
+    creadoEn: new Date(data.creado_en).getTime()
+  };
+}
+
+export async function guardarMeta(corredorId: string, ritmoObjetivoMsPor10m: number): Promise<Meta> {
+  const { data, error } = await supabase
+    .from('metas')
+    .upsert(
+      { corredor_id: corredorId, ritmo_objetivo_ms_por_10m: ritmoObjetivoMsPor10m },
+      { onConflict: 'corredor_id' }
+    )
+    .select()
+    .single();
+
+  if (error || !data) throw error ?? new Error('No se pudo guardar la meta');
+
+  return {
+    corredorId: data.corredor_id,
+    ritmoObjetivoMsPor10m: data.ritmo_objetivo_ms_por_10m,
+    creadoEn: new Date(data.creado_en).getTime()
   };
 }
 

@@ -26,6 +26,12 @@ export interface Intento {
   creadoEn: number;
 }
 
+export interface Meta {
+  corredorId: string;
+  ritmoObjetivoMsPor10m: number;
+  creadoEn: number;
+}
+
 export interface BackupCorredor {
   version: 2;
   corredorNombre: string;

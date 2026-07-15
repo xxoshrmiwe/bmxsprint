@@ -103,3 +103,29 @@ export function IconoBuscar({ className }: Props) {
     </svg>
   );
 }
+
+export function IconoObjetivo({ className }: Props) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <circle cx="12" cy="12" r="9" />
+      <circle cx="12" cy="12" r="5" />
+      <circle cx="12" cy="12" r="1" fill="currentColor" />
+    </svg>
+  );
+}
+
+export function IconoFlechaArriba({ className }: Props) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 19V5M6 11l6-6 6 6" />
+    </svg>
+  );
+}
+
+export function IconoFlechaAbajo({ className }: Props) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M12 5v14M6 13l6 6 6-6" />
+    </svg>
+  );
+}

@@ -17,7 +17,7 @@ Cronómetro de gate para entrenamientos de BMX Racing: registra corredores, arra
 ## Configurar Supabase (obligatorio)
 
 1. Creá un proyecto gratis en [supabase.com](https://supabase.com).
-2. En **SQL Editor**, pegá y corré el contenido de [`supabase/schema.sql`](supabase/schema.sql). Esto crea las tablas `corredores`, `sesiones`, `intentos`, sus políticas de Row Level Security, y un trigger que crea el perfil del corredor automáticamente cuando alguien se registra.
+2. En **SQL Editor**, pegá y corré el contenido de [`supabase/schema.sql`](supabase/schema.sql). Esto crea las tablas `corredores`, `sesiones`, `intentos`, `metas` (una meta de ritmo por corredor, en segundos cada 10 metros — sirve para cualquier distancia que entrene), sus políticas de Row Level Security, y un trigger que crea el perfil del corredor automáticamente cuando alguien se registra. Si ya habías corrido una versión anterior de este archivo, basta con volver a correrlo: usa `create table if not exists`.
 3. En **Settings → API**, copiá el **Project URL** y la **anon public key**.
 4. Copiá `.env.example` a `.env` y completá esos dos valores:
    ```
