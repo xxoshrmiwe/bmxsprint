@@ -15,10 +15,12 @@ const { title = 'Sprints BMX', noindex = false } = Astro.props;
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
     <meta name="generator" content={Astro.generator} />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <title>{title}</title>
   </head>
-  <body class="min-h-screen bg-slate-50">
+  <body class="min-h-screen bg-background">
     <slot />
   </body>
 </html>

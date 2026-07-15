@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import type { Sesion, Intento } from '../lib/types';
 import { elegirClipAleatorio, type ClipGate } from '../lib/audio';
 import { crearIntento } from '../lib/db';
+import { IconoAlerta } from './Icono';
 
 interface Props {
   sesion: Sesion;
@@ -19,6 +20,17 @@ function formatearTiempo(ms: number): string {
   const segTxt = min > 0 ? seg.toString().padStart(2, '0') : seg.toString();
   const prefijo = min > 0 ? `${min}:` : '';
   return `${prefijo}${segTxt}.${centesimas.toString().padStart(2, '0')}`;
+}
+
+function LuzSemaforo({ color, activa }: { color: 'red' | 'yellow' | 'green'; activa: boolean }) {
+  const bg = color === 'red' ? 'bg-destructive' : color === 'yellow' ? 'bg-warning' : 'bg-accent';
+  return (
+    <span
+      className={`h-4 w-4 rounded-full transition-opacity duration-300 ${bg} ${
+        activa ? 'opacity-100 animate-pulse' : 'opacity-15'
+      }`}
+    />
+  );
 }
 
 export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
@@ -110,21 +122,29 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   return (
     <div className="mx-auto max-w-md space-y-6 p-4 text-center">
       <div className="text-left">
-        <h1 className="text-xl font-bold text-slate-900">Gate — {sesion.distanciaMetros} m</h1>
-        <p className="text-slate-500">Intento {intentosSesion.length + 1}</p>
+        <h1 className="text-2xl font-bold text-foreground">Gate — {sesion.distanciaMetros} m</h1>
+        <p className="text-muted-foreground">Intento {intentosSesion.length + 1}</p>
       </div>
 
       {error && (
-        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-left text-sm text-red-700">{error}</div>
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-left text-sm text-destructive">
+          <IconoAlerta className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
       )}
 
       <audio ref={audioRef} onEnded={handleAudioEnded} preload="auto" />
 
-      <div className="rounded-lg border border-slate-200 bg-white py-12">
-        <span className="font-mono text-6xl font-bold tabular-nums text-slate-900">
+      <div className="card py-10">
+        <div className="mb-4 flex justify-center gap-3">
+          <LuzSemaforo color="red" activa={estado === 'listo'} />
+          <LuzSemaforo color="yellow" activa={estado === 'reproduciendo'} />
+          <LuzSemaforo color="green" activa={estado === 'corriendo'} />
+        </div>
+        <span className="font-heading text-7xl font-bold tabular-nums text-primary">
           {formatearTiempo(elapsedMs)}
         </span>
-        <p className="mt-2 text-sm text-slate-400">
+        <p className="mt-2 text-sm text-muted-foreground">
           {estado === 'listo' && 'Listo para arrancar'}
           {estado === 'reproduciendo' && 'Reproduciendo salida...'}
           {estado === 'corriendo' && '¡Corriendo!'}
@@ -133,16 +153,13 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       </div>
 
       {estado === 'listo' && (
-        <button
-          onClick={reproducirSalida}
-          className="w-full rounded-md bg-slate-900 px-4 py-4 text-lg font-medium text-white hover:bg-slate-700"
-        >
+        <button onClick={reproducirSalida} className="btn-primary w-full py-4 text-lg">
           Reproducir salida
         </button>
       )}
 
       {estado === 'reproduciendo' && (
-        <button disabled className="w-full rounded-md bg-slate-300 px-4 py-4 text-lg font-medium text-white">
+        <button disabled className="w-full cursor-not-allowed rounded-lg bg-warning px-4 py-4 text-lg font-semibold text-warning-foreground opacity-90">
           Esperando el gate...
         </button>
       )}
@@ -150,7 +167,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       {estado === 'corriendo' && (
         <button
           onClick={detener}
-          className="w-full rounded-md bg-red-600 px-4 py-6 text-2xl font-bold text-white hover:bg-red-700"
+          className="w-full cursor-pointer rounded-lg bg-destructive px-4 py-6 text-2xl font-bold text-destructive-foreground shadow-lg transition-transform duration-150 hover:scale-[1.02] active:scale-95"
         >
           DETENER
         </button>
@@ -161,13 +178,13 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
           <button
             onClick={guardarYRepetir}
             disabled={guardando}
-            className="flex-1 rounded-md bg-emerald-600 px-4 py-3 font-medium text-white hover:bg-emerald-700 disabled:opacity-50"
+            className="flex-1 cursor-pointer rounded-lg bg-accent px-4 py-3 font-semibold text-accent-foreground shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
           >
             {guardando ? 'Guardando...' : 'Guardar y repetir'}
           </button>
           <button
             onClick={descartarYRepetir}
-            className="rounded-md border border-slate-300 px-4 py-3 text-slate-600 hover:bg-slate-50"
+            className="cursor-pointer rounded-lg border border-border bg-white px-4 py-3 font-semibold text-muted-foreground transition-colors duration-200 hover:bg-surface"
           >
             Descartar
           </button>
@@ -176,24 +193,23 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
 
       {intentosSesion.length > 0 && (
         <div className="text-left">
-          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-slate-500">
+          <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
             Intentos guardados
           </h2>
-          <ul className="divide-y divide-slate-200 rounded-lg border border-slate-200 bg-white">
+          <ul className="divide-y divide-border rounded-xl border border-border bg-white">
             {intentosSesion.map((i) => (
               <li key={i.id} className="flex justify-between px-4 py-2">
-                <span className="text-slate-500">#{i.numero}</span>
-                <span className="font-mono font-medium text-slate-900">{formatearTiempo(i.tiempoTotalMs)}</span>
+                <span className="text-muted-foreground">#{i.numero}</span>
+                <span className="font-heading font-semibold tabular-nums text-primary">
+                  {formatearTiempo(i.tiempoTotalMs)}
+                </span>
               </li>
             ))}
           </ul>
         </div>
       )}
 
-      <button
-        onClick={() => onFinalizarSesion(intentosSesion)}
-        className="w-full rounded-md border border-slate-900 px-4 py-3 font-medium text-slate-900 hover:bg-slate-50"
-      >
+      <button onClick={() => onFinalizarSesion(intentosSesion)} className="btn-secondary w-full">
         Finalizar sesión
       </button>
     </div>

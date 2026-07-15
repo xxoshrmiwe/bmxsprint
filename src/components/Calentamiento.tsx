@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { obtenerRutina } from '../lib/warmup';
+import { IconoCheck } from './Icono';
 
 interface Props {
   edad?: number;
@@ -83,24 +84,33 @@ export default function Calentamiento({ edad, onListo }: Props) {
   return (
     <div className="mx-auto max-w-md space-y-6 p-4">
       <div>
-        <h1 className="text-xl font-bold text-slate-900">Calentamiento</h1>
-        <p className="text-slate-500">
+        <h1 className="text-2xl font-bold text-foreground">Calentamiento</h1>
+        <p className="text-muted-foreground">
           {terminado ? 'Rutina completa' : `Ejercicio ${indice + 1} de ${rutina.length}`}
         </p>
+        {!terminado && (
+          <div className="mt-2 h-1.5 w-full overflow-hidden rounded-full bg-surface">
+            <div
+              className="h-full rounded-full bg-accent transition-all duration-300"
+              style={{ width: `${((indice + 1) / rutina.length) * 100}%` }}
+            />
+          </div>
+        )}
       </div>
 
       {terminado ? (
-        <div className="rounded-lg border border-emerald-300 bg-emerald-50 p-6 text-center">
-          <p className="text-lg font-semibold text-emerald-800">¡Calentamiento listo!</p>
-          <p className="text-emerald-700">A darle al gate.</p>
+        <div className="card space-y-2 border-accent/30 bg-accent/10 text-center">
+          <IconoCheck className="mx-auto h-10 w-10 text-accent" />
+          <p className="text-lg font-semibold text-primary">¡Calentamiento listo!</p>
+          <p className="text-muted-foreground">A darle al gate.</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-slate-200 bg-white p-4 text-center">
-          <span className="font-mono text-6xl font-bold tabular-nums text-slate-900">
+        <div className="card text-center">
+          <span className="font-heading text-7xl font-bold tabular-nums text-primary">
             {formatearSegundos(msRestante)}
           </span>
-          <h2 className="mt-3 text-lg font-semibold text-slate-900">{ejercicio.nombre}</h2>
-          <ul className="mt-3 space-y-1 text-left text-sm text-slate-600">
+          <h2 className="mt-3 text-lg font-semibold text-foreground">{ejercicio.nombre}</h2>
+          <ul className="mt-3 space-y-1 text-left text-sm text-muted-foreground">
             {ejercicio.pasos.map((paso, i) => (
               <li key={i}>• {paso}</li>
             ))}
@@ -111,33 +121,27 @@ export default function Calentamiento({ edad, onListo }: Props) {
       {!terminado && (
         <div className="flex gap-3">
           {!corriendo ? (
-            <button
-              onClick={() => setCorriendo(true)}
-              className="flex-1 rounded-md bg-slate-900 px-4 py-3 font-medium text-white hover:bg-slate-700"
-            >
+            <button onClick={() => setCorriendo(true)} className="btn-primary flex-1">
               {msRestante === ejercicio.segundos * 1000 ? 'Iniciar' : 'Reanudar'}
             </button>
           ) : (
             <button
               onClick={() => setCorriendo(false)}
-              className="flex-1 rounded-md bg-amber-500 px-4 py-3 font-medium text-white hover:bg-amber-600"
+              className="flex-1 cursor-pointer rounded-lg bg-warning px-4 py-3 font-semibold text-warning-foreground shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0"
             >
               Pausar
             </button>
           )}
           <button
             onClick={saltarEjercicio}
-            className="rounded-md border border-slate-300 px-4 py-3 text-slate-600 hover:bg-slate-50"
+            className="cursor-pointer rounded-lg border border-border bg-white px-4 py-3 font-semibold text-muted-foreground transition-colors duration-200 hover:bg-surface"
           >
             Siguiente
           </button>
         </div>
       )}
 
-      <button
-        onClick={onListo}
-        className="w-full rounded-md border border-slate-900 px-4 py-3 font-medium text-slate-900 hover:bg-slate-50"
-      >
+      <button onClick={onListo} className="btn-secondary w-full">
         {terminado ? 'Ir al gate →' : 'Saltar calentamiento e ir al gate →'}
       </button>
     </div>

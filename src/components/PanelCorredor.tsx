@@ -1,5 +1,6 @@
 import { cerrarSesion } from '../lib/cuenta';
 import type { Corredor } from '../lib/types';
+import { IconoRayo, IconoGrafico, IconoDescarga } from './Icono';
 
 interface Props {
   corredor: Corredor;
@@ -23,32 +24,36 @@ export default function PanelCorredor({
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-4">
-      <button onClick={handleCerrarSesion} className="text-sm text-slate-500 hover:text-slate-700">
+      <button onClick={handleCerrarSesion} className="btn-ghost">
         ← Cerrar sesión
       </button>
 
       <div>
-        <h1 className="text-2xl font-bold text-slate-900">{corredor.nombre}</h1>
-        {corredor.categoria && <p className="text-slate-500">{corredor.categoria}</p>}
+        <h1 className="text-3xl font-bold text-foreground">{corredor.nombre}</h1>
+        {corredor.categoria && (
+          <span className="mt-1 inline-block rounded-full bg-accent/10 px-2.5 py-0.5 text-sm font-medium text-primary">
+            {corredor.categoria}
+          </span>
+        )}
       </div>
 
       <div className="space-y-3">
-        <button
-          onClick={onNuevaSesion}
-          className="w-full rounded-md bg-slate-900 px-4 py-4 text-lg font-medium text-white hover:bg-slate-700"
-        >
+        <button onClick={onNuevaSesion} className="btn-primary flex w-full items-center justify-center gap-2 py-4 text-lg">
+          <IconoRayo className="h-5 w-5" />
           Nuevo entrenamiento
         </button>
         <button
           onClick={onHistorial}
-          className="w-full rounded-md border border-slate-300 px-4 py-3 font-medium text-slate-700 hover:bg-slate-50"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-3 font-semibold text-foreground transition-colors duration-200 hover:bg-surface"
         >
+          <IconoGrafico className="h-5 w-5 text-muted-foreground" />
           Ver historial
         </button>
         <button
           onClick={onExportarImportar}
-          className="w-full rounded-md border border-slate-300 px-4 py-3 font-medium text-slate-700 hover:bg-slate-50"
+          className="flex w-full cursor-pointer items-center justify-center gap-2 rounded-lg border border-border bg-white px-4 py-3 font-semibold text-foreground transition-colors duration-200 hover:bg-surface"
         >
+          <IconoDescarga className="h-5 w-5 text-muted-foreground" />
           Exportar / Importar
         </button>
       </div>

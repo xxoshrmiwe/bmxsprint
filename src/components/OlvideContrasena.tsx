@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { solicitarRecuperacion } from '../lib/cuenta';
+import { IconoAlerta, IconoCheck } from './Icono';
 
 interface Props {
   onVolver: () => void;
@@ -27,30 +28,36 @@ export default function OlvideContrasena({ onVolver }: Props) {
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-6">
-      <button onClick={onVolver} className="text-sm text-slate-500 hover:text-slate-700">
+      <button onClick={onVolver} className="btn-ghost">
         ← Volver
       </button>
 
-      <h1 className="text-xl font-bold text-slate-900">Recuperar contraseña</h1>
+      <h1 className="text-2xl font-bold text-foreground">Recuperar contraseña</h1>
 
       {enviado ? (
-        <div className="rounded-md border border-emerald-300 bg-emerald-50 p-4 text-sm text-emerald-700">
-          Te enviamos un correo a <strong>{email}</strong> con un enlace para elegir una nueva contraseña.
-          Revisa también la carpeta de spam.
+        <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/10 p-4 text-sm text-primary">
+          <IconoCheck className="mt-0.5 h-5 w-5 shrink-0 text-accent" />
+          <span>
+            Te enviamos un correo a <strong>{email}</strong> con un enlace para elegir una nueva contraseña.
+            Revisa también la carpeta de spam.
+          </span>
         </div>
       ) : (
         <>
-          <p className="text-slate-500">
+          <p className="text-muted-foreground">
             Escribe el correo con el que te registraste y te mandamos un enlace para restablecer tu contraseña.
           </p>
 
           {error && (
-            <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+            <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+              <IconoAlerta className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>{error}</span>
+            </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+          <form onSubmit={handleSubmit} className="card space-y-4">
             <div>
-              <label className="mb-1 block text-sm text-slate-600" htmlFor="email">
+              <label className="mb-1 block text-sm text-muted-foreground" htmlFor="email">
                 Correo electrónico
               </label>
               <input
@@ -60,15 +67,11 @@ export default function OlvideContrasena({ onVolver }: Props) {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 autoFocus
-                className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
+                className="input"
                 placeholder="papa@correo.com"
               />
             </div>
-            <button
-              type="submit"
-              disabled={enviando}
-              className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-            >
+            <button type="submit" disabled={enviando} className="btn-primary w-full">
               {enviando ? 'Enviando...' : 'Enviar enlace de recuperación'}
             </button>
           </form>

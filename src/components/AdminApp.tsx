@@ -4,6 +4,7 @@ import { iniciarSesion, cerrarSesion } from '../lib/cuenta';
 import { obtenerDatosAdmin, enviarRecuperacion, type DatosAdmin } from '../lib/adminApi';
 import CampoPassword from './CampoPassword';
 import OlvideContrasena from './OlvideContrasena';
+import { IconoAlerta, IconoBuscar } from './Icono';
 
 type Vista = 'cargando' | 'login' | 'olvide-password' | 'sin-acceso' | 'dashboard';
 
@@ -73,19 +74,22 @@ export default function AdminApp() {
   }
 
   if (vista === 'cargando') {
-    return <p className="p-6 text-center text-slate-400">Cargando...</p>;
+    return <p className="p-6 text-center text-muted-foreground">Cargando...</p>;
   }
 
   if (vista === 'login') {
     return (
       <div className="mx-auto max-w-sm space-y-6 p-6">
-        <h1 className="text-xl font-bold text-slate-900">Sprints BMX — Admin</h1>
+        <h1 className="text-2xl font-bold text-foreground">Sprints BMX — Admin</h1>
         {error && (
-          <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+          <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+            <IconoAlerta className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
         )}
-        <form onSubmit={handleLogin} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+        <form onSubmit={handleLogin} className="card space-y-4">
           <div>
-            <label className="mb-1 block text-sm text-slate-600" htmlFor="email">
+            <label className="mb-1 block text-sm text-muted-foreground" htmlFor="email">
               Correo
             </label>
             <input
@@ -95,37 +99,30 @@ export default function AdminApp() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
-              className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
+              className="input"
             />
           </div>
           <div>
-            <label className="mb-1 block text-sm text-slate-600" htmlFor="password">
+            <label className="mb-1 block text-sm text-muted-foreground" htmlFor="password">
               Contraseña
             </label>
             <CampoPassword id="password" value={password} onChange={setPassword} required autoComplete="current-password" />
           </div>
-          <label className="flex items-center gap-2 text-sm text-slate-600">
+          <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
             <input
               type="checkbox"
               checked={recordar}
               onChange={(e) => setRecordar(e.target.checked)}
-              className="h-4 w-4"
+              className="h-4 w-4 cursor-pointer accent-primary"
             />
             Recordarme en este dispositivo
           </label>
-          <button
-            type="submit"
-            disabled={entrando}
-            className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-          >
+          <button type="submit" disabled={entrando} className="btn-primary w-full">
             {entrando ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 
-        <button
-          onClick={() => setVista('olvide-password')}
-          className="w-full text-center text-sm text-slate-500 hover:text-slate-700"
-        >
+        <button onClick={() => setVista('olvide-password')} className="btn-ghost w-full text-center">
           ¿Olvidaste tu contraseña?
         </button>
       </div>
@@ -139,12 +136,10 @@ export default function AdminApp() {
   if (vista === 'sin-acceso') {
     return (
       <div className="mx-auto max-w-sm space-y-4 p-6 text-center">
-        <h1 className="text-xl font-bold text-slate-900">Sin acceso</h1>
-        <p className="text-slate-500">Esta cuenta no tiene permisos de administrador.</p>
-        <button
-          onClick={handleSalir}
-          className="w-full rounded-md border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <IconoAlerta className="mx-auto h-10 w-10 text-destructive" />
+        <h1 className="text-2xl font-bold text-foreground">Sin acceso</h1>
+        <p className="text-muted-foreground">Esta cuenta no tiene permisos de administrador.</p>
+        <button onClick={handleSalir} className="btn-secondary w-full">
           Cerrar sesión
         </button>
       </div>
@@ -160,8 +155,8 @@ export default function AdminApp() {
   return (
     <div className="mx-auto max-w-5xl space-y-6 p-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-xl font-bold text-slate-900">Sprints BMX — Admin</h1>
-        <button onClick={handleSalir} className="text-sm text-slate-500 hover:text-slate-700">
+        <h1 className="text-2xl font-bold text-foreground">Sprints BMX — Admin</h1>
+        <button onClick={handleSalir} className="btn-ghost">
           Cerrar sesión
         </button>
       </div>
@@ -175,24 +170,27 @@ export default function AdminApp() {
             ['Nuevos (7 días)', datos.resumen.corredoresNuevosUltimos7Dias],
             ['Sesiones (7 días)', datos.resumen.sesionesUltimos7Dias]
           ].map(([etiqueta, valor]) => (
-            <div key={etiqueta as string} className="rounded-lg border border-slate-200 bg-white p-3 text-center">
-              <div className="text-2xl font-bold text-slate-900">{valor}</div>
-              <div className="text-xs text-slate-500">{etiqueta}</div>
+            <div key={etiqueta as string} className="card text-center">
+              <div className="font-heading text-3xl font-bold tabular-nums text-primary">{valor}</div>
+              <div className="text-xs text-muted-foreground">{etiqueta}</div>
             </div>
           ))}
         </div>
       )}
 
-      <input
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-        placeholder="Buscar por nombre o correo..."
-        className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
-      />
+      <div className="relative">
+        <IconoBuscar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <input
+          value={busqueda}
+          onChange={(e) => setBusqueda(e.target.value)}
+          placeholder="Buscar por nombre o correo..."
+          className="input pl-9"
+        />
+      </div>
 
-      <div className="overflow-x-auto rounded-lg border border-slate-200 bg-white">
+      <div className="overflow-x-auto rounded-xl border border-border bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
-          <thead className="border-b border-slate-200 text-slate-500">
+          <thead className="border-b border-border text-muted-foreground">
             <tr>
               <th className="px-3 py-2">Nombre</th>
               <th className="px-3 py-2">Correo</th>
@@ -205,24 +203,24 @@ export default function AdminApp() {
               <th className="px-3 py-2"></th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-slate-100">
+          <tbody className="divide-y divide-border">
             {usuariosFiltrados.map((u) => {
               const estado = estadoRecuperacion[u.email];
               return (
-                <tr key={u.id}>
-                  <td className="px-3 py-2 font-medium text-slate-900">{u.nombre}</td>
-                  <td className="px-3 py-2 text-slate-600">{u.email}</td>
-                  <td className="px-3 py-2 text-slate-600">{u.categoria ?? '—'}</td>
-                  <td className="px-3 py-2 text-slate-600">{u.edad ?? '—'}</td>
-                  <td className="px-3 py-2 text-slate-600">{formatearFecha(u.creadoEn)}</td>
-                  <td className="px-3 py-2 text-slate-600">{u.totalSesiones}</td>
-                  <td className="px-3 py-2 text-slate-600">{u.totalIntentos}</td>
-                  <td className="px-3 py-2 text-slate-600">{formatearFecha(u.ultimaSesion)}</td>
+                <tr key={u.id} className="transition-colors duration-150 hover:bg-surface">
+                  <td className="px-3 py-2 font-medium text-foreground">{u.nombre}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{u.email}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{u.categoria ?? '—'}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{u.edad ?? '—'}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{formatearFecha(u.creadoEn)}</td>
+                  <td className="px-3 py-2 tabular-nums text-muted-foreground">{u.totalSesiones}</td>
+                  <td className="px-3 py-2 tabular-nums text-muted-foreground">{u.totalIntentos}</td>
+                  <td className="px-3 py-2 text-muted-foreground">{formatearFecha(u.ultimaSesion)}</td>
                   <td className="px-3 py-2">
                     <button
                       onClick={() => handleRecuperar(u.email)}
                       disabled={estado === 'enviando'}
-                      className="rounded-md border border-slate-300 px-2 py-1 text-xs text-slate-600 hover:bg-slate-50 disabled:opacity-50"
+                      className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {estado === 'enviando'
                         ? 'Enviando...'
@@ -238,7 +236,7 @@ export default function AdminApp() {
             })}
             {usuariosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-slate-400">
+                <td colSpan={9} className="px-3 py-6 text-center text-muted-foreground">
                   No hay corredores que coincidan.
                 </td>
               </tr>

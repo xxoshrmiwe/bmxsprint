@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { actualizarPassword } from '../lib/cuenta';
 import CampoPassword from './CampoPassword';
+import { IconoAlerta, IconoCheck } from './Icono';
 
 export default function RestablecerPassword() {
   const [listo, setListo] = useState(false);
@@ -65,12 +66,10 @@ export default function RestablecerPassword() {
   if (listaParaEntrar) {
     return (
       <div className="mx-auto max-w-md space-y-4 p-6 text-center">
-        <h1 className="text-xl font-bold text-slate-900">¡Contraseña actualizada!</h1>
-        <p className="text-slate-500">Ya puedes volver a la app e iniciar sesión con tu nueva contraseña.</p>
-        <a
-          href="/"
-          className="inline-block w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700"
-        >
+        <IconoCheck className="mx-auto h-12 w-12 text-accent" />
+        <h1 className="text-2xl font-bold text-foreground">¡Contraseña actualizada!</h1>
+        <p className="text-muted-foreground">Ya puedes volver a la app e iniciar sesión con tu nueva contraseña.</p>
+        <a href="/" className="btn-primary block w-full">
           Ir a la app
         </a>
       </div>
@@ -80,14 +79,12 @@ export default function RestablecerPassword() {
   if (enlaceInvalido && !listo) {
     return (
       <div className="mx-auto max-w-md space-y-4 p-6 text-center">
-        <h1 className="text-xl font-bold text-slate-900">Enlace no válido o vencido</h1>
-        <p className="text-slate-500">
+        <IconoAlerta className="mx-auto h-12 w-12 text-destructive" />
+        <h1 className="text-2xl font-bold text-foreground">Enlace no válido o vencido</h1>
+        <p className="text-muted-foreground">
           Pide un nuevo enlace de recuperación desde la app ("¿Olvidaste tu contraseña?").
         </p>
-        <a
-          href="/"
-          className="inline-block w-full rounded-md border border-slate-300 px-4 py-2 font-medium text-slate-700 hover:bg-slate-50"
-        >
+        <a href="/" className="btn-secondary block w-full">
           Volver a la app
         </a>
       </div>
@@ -95,20 +92,23 @@ export default function RestablecerPassword() {
   }
 
   if (!listo) {
-    return <p className="p-6 text-center text-slate-400">Verificando enlace...</p>;
+    return <p className="p-6 text-center text-muted-foreground">Verificando enlace...</p>;
   }
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-6">
-      <h1 className="text-xl font-bold text-slate-900">Elige una nueva contraseña</h1>
+      <h1 className="text-2xl font-bold text-foreground">Elige una nueva contraseña</h1>
 
       {error && (
-        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <IconoAlerta className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+      <form onSubmit={handleSubmit} className="card space-y-4">
         <div>
-          <label className="mb-1 block text-sm text-slate-600" htmlFor="password">
+          <label className="mb-1 block text-sm text-muted-foreground" htmlFor="password">
             Nueva contraseña
           </label>
           <CampoPassword
@@ -121,16 +121,12 @@ export default function RestablecerPassword() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-slate-600" htmlFor="confirmar">
+          <label className="mb-1 block text-sm text-muted-foreground" htmlFor="confirmar">
             Confirmar contraseña
           </label>
           <CampoPassword id="confirmar" value={confirmar} onChange={setConfirmar} required autoComplete="new-password" />
         </div>
-        <button
-          type="submit"
-          disabled={guardando}
-          className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-        >
+        <button type="submit" disabled={guardando} className="btn-primary w-full">
           {guardando ? 'Guardando...' : 'Guardar nueva contraseña'}
         </button>
       </form>
