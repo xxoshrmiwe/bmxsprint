@@ -16,6 +16,11 @@ type Estado = 'listo' | 'reproduciendo' | 'corriendo' | 'detenido';
 // para compensar la cola de silencio/reverb que queda después del "drop" real.
 const ANTICIPO_MS = 2000;
 
+// Los audios del partidor suenan bajito (~-11 dB de pico), así que se
+// amplifican un 30% extra vía Web Audio API (el .volume del <audio> no
+// puede pasar de 100%, no alcanza para subir más que el nivel original).
+const VOLUMEN_BOOST = 1.3;
+
 function LuzSemaforo({ color, activa }: { color: 'red' | 'yellow' | 'green'; activa: boolean }) {
   const bg = color === 'red' ? 'bg-destructive' : color === 'yellow' ? 'bg-warning' : 'bg-accent';
   return (
@@ -40,13 +45,30 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   const rafRef = useRef<number | null>(null);
   const anticipoRef = useRef<number | null>(null);
   const iniciadoRef = useRef(false);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const gainNodeRef = useRef<GainNode | null>(null);
 
   useEffect(() => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (anticipoRef.current) clearTimeout(anticipoRef.current);
+      audioCtxRef.current?.close();
     };
   }, []);
+
+  // Conecta el <audio> a un GainNode una sola vez (createMediaElementSource
+  // no se puede llamar dos veces sobre el mismo elemento).
+  function asegurarGananciaAudio() {
+    const audio = audioRef.current;
+    if (!audio || gainNodeRef.current) return;
+    const AudioCtxCtor = window.AudioContext ?? (window as any).webkitAudioContext;
+    const ctx = new AudioCtxCtor();
+    const gain = ctx.createGain();
+    gain.gain.value = VOLUMEN_BOOST;
+    ctx.createMediaElementSource(audio).connect(gain).connect(ctx.destination);
+    audioCtxRef.current = ctx;
+    gainNodeRef.current = gain;
+  }
 
   function iniciarLoop() {
     function tick() {
@@ -78,6 +100,8 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       if (!audio) return;
       audio.src = elegido.url;
       audio.load();
+      asegurarGananciaAudio();
+      audioCtxRef.current?.resume();
       audio
         .play()
         .then(() => {
