@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { Corredor, Sesion } from '../lib/types';
 import { obtenerCorredorActual } from '../lib/cuenta';
+import { useMantenerPantallaActiva } from '../lib/pantalla';
 import Landing from './Landing';
 import Acceso from './Acceso';
 import IniciarSesion from './IniciarSesion';
@@ -30,6 +31,8 @@ type Vista =
 
 export default function SprintApp() {
   const [vista, setVista] = useState<Vista>({ tipo: 'cargando' });
+
+  useMantenerPantallaActiva(vista.tipo === 'calentamiento' || vista.tipo === 'gate');
 
   useEffect(() => {
     obtenerCorredorActual().then((corredor) => {
