@@ -23,7 +23,7 @@ const { title = 'GATERIGHT BMX', noindex = false } = Astro.props;
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <title>{title}</title>
   </head>
-  <body class="min-h-screen bg-background">
+  <body class="min-h-dvh overscroll-none bg-background">
     <slot />
   </body>
 </html>
