@@ -22,14 +22,14 @@ export default function CampoPassword({ id, value, onChange, autoFocus, required
         autoFocus={autoFocus}
         required={required}
         autoComplete={autoComplete}
-        className="w-full rounded-md border border-slate-300 px-3 py-2 pr-10 focus:border-slate-500 focus:outline-none"
+        className="input pr-10"
       />
       <button
         type="button"
         onClick={() => setVisible((v) => !v)}
         tabIndex={-1}
         aria-label={visible ? 'Ocultar contraseña' : 'Mostrar contraseña'}
-        className="absolute inset-y-0 right-0 flex items-center px-3 text-slate-400 hover:text-slate-600"
+        className="absolute inset-y-0 right-0 flex cursor-pointer items-center px-3 text-muted-foreground transition-colors duration-200 hover:text-primary"
       >
         {visible ? (
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5">

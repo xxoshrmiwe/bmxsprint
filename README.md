@@ -1,4 +1,4 @@
-# Sprints BMX
+# GATERIGHT BMX
 
 Cronómetro de gate para entrenamientos de BMX Racing: registra corredores, arranca un nuevo entrenamiento indicando la distancia del sprint, hace (o salta) un calentamiento, reproduce un audio de salida al azar y mide el tiempo desde el "gate drop" hasta que detienes manualmente.
 
@@ -17,7 +17,7 @@ Cronómetro de gate para entrenamientos de BMX Racing: registra corredores, arra
 ## Configurar Supabase (obligatorio)
 
 1. Creá un proyecto gratis en [supabase.com](https://supabase.com).
-2. En **SQL Editor**, pegá y corré el contenido de [`supabase/schema.sql`](supabase/schema.sql). Esto crea las tablas `corredores`, `sesiones`, `intentos`, sus políticas de Row Level Security, y un trigger que crea el perfil del corredor automáticamente cuando alguien se registra.
+2. En **SQL Editor**, pegá y corré el contenido de [`supabase/schema.sql`](supabase/schema.sql). Esto crea las tablas `corredores`, `sesiones`, `intentos`, `metas` (una meta de ritmo por corredor, en segundos cada 10 metros — sirve para cualquier distancia que entrene), sus políticas de Row Level Security, y un trigger que crea el perfil del corredor automáticamente cuando alguien se registra. Si ya habías corrido una versión anterior de este archivo, basta con volver a correrlo: usa `create table if not exists`.
 3. En **Settings → API**, copiá el **Project URL** y la **anon public key**.
 4. Copiá `.env.example` a `.env` y completá esos dos valores:
    ```
@@ -35,7 +35,7 @@ En **Authentication → Email Templates** de Supabase están las plantillas que 
 - **Confirm signup** → es el correo de bienvenida que recibe cada corredor al registrarse.
 - **Reset password** → es el correo que recibe al pedir "¿Olvidaste tu contraseña?".
 
-Podés editar el asunto y el HTML de cada una para que suene más a "Sprints BMX" en vez del texto genérico de Supabase.
+Podés editar el asunto y el HTML de cada una para que suene más a "GATERIGHT BMX" en vez del texto genérico de Supabase.
 
 > **Límite del plan gratis:** Supabase usa un SMTP propio para el plan gratuito con un límite bajo de correos por hora (pensado para pruebas). Para uso real con varias familias, conviene configurar un SMTP propio (ej. Resend, gratis hasta 3,000 correos/mes) en **Settings → Auth → SMTP Settings**.
 
@@ -62,6 +62,21 @@ Ruta oculta (no está linkeada en ningún menú, y lleva `noindex` + está bloqu
 - `src/pages/bmxadmin.astro` + `src/components/AdminApp.tsx`: login con correo/contraseña (la misma auth de Supabase), y si la sesión es válida, pide los datos a la API.
 - `api/admin/data.ts`: verifica el token contra `ADMIN_EMAILS`, y si es admin, usa la `service_role key` (que salta el Row Level Security) para traer todos los corredores, sus estadísticas y sus correos.
 - `api/admin/recuperar.ts`: dispara el correo de "recuperar contraseña" (plantilla "Reset password" de Supabase) para el corredor que elijas desde la tabla.
+
+## Buzón de ideas (bombillo flotante)
+
+El bombillo flotante que aparece en toda la app abre una caja de comentarios; lo que se escribe ahí llega por correo usando [Resend](https://resend.com) (gratis hasta 3,000 correos/mes, no requiere dominio propio para empezar).
+
+1. Creá una cuenta gratis en [resend.com](https://resend.com) y copiá tu **API Key** desde el dashboard.
+2. Variables de entorno necesarias (server-only, sin prefijo `PUBLIC_`):
+   ```
+   RESEND_API_KEY=tu-resend-api-key
+   FEEDBACK_TO_EMAIL=oscargonzalez0710@gmail.com
+   ```
+3. En Vercel, cargá esas mismas variables en **Settings → Environment Variables**.
+4. Por defecto los correos se mandan desde `onboarding@resend.dev` (el remitente de pruebas de Resend, funciona sin verificar un dominio). Si más adelante querés que salgan desde un correo propio (ej. `ideas@gaterightbmx.com`), hay que verificar ese dominio en Resend y cambiar el `from` en [`api/feedback.ts`](api/feedback.ts).
+
+`api/feedback.ts` valida el mensaje (no vacío, máximo 2000 caracteres) y descarta en silencio los envíos que llenen el campo trampa oculto (protección básica contra bots), antes de mandar el correo.
 
 ## Cómo agregar los audios de salida (gate)
 
@@ -97,12 +112,13 @@ api/
 ├── _lib/
 │   ├── supabaseAdmin.ts   # Cliente de Supabase con la service_role key (solo servidor)
 │   └── verificarAdmin.ts  # Valida el token del caller contra ADMIN_EMAILS
-└── admin/
-    ├── data.ts        # GET: corredores + estadísticas (requiere ser admin)
-    └── recuperar.ts   # POST: dispara el correo de recuperación de un corredor
+├── admin/
+│   ├── data.ts        # GET: corredores + estadísticas (requiere ser admin)
+│   └── recuperar.ts   # POST: dispara el correo de recuperación de un corredor
+└── feedback.ts        # POST: manda por correo (Resend) lo que se escribe en el bombillo flotante
 src/
 ├── assets/gate/       # Audios de salida (.mp3/.wav/.ogg/.m4a) — los subes tú
-├── components/        # Componentes React (registro, login, recuperar contraseña, sesión, gate timer, historial, export/import, admin)
+├── components/        # Componentes React (registro, login, recuperar contraseña, sesión, gate timer, historial, export/import, admin, bombillo de ideas)
 ├── layouts/           # Layout de Astro (importa Tailwind)
 ├── lib/
 │   ├── audio.ts       # Detecta y elige al azar un audio de gate

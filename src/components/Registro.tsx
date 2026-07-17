@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { registrarCorredor } from '../lib/cuenta';
 import CampoPassword from './CampoPassword';
+import { IconoAlerta } from './Icono';
 
 interface Props {
   onRegistrado: (opciones: { sesionActiva: boolean; email: string }) => void;
@@ -54,19 +55,22 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-6">
-      <button onClick={onVolver} className="text-sm text-slate-500 hover:text-slate-700">
+      <button onClick={onVolver} className="btn-ghost">
         ← Volver
       </button>
 
-      <h1 className="text-xl font-bold text-slate-900">Soy un corredor nuevo</h1>
+      <h1 className="text-2xl font-bold text-foreground">Soy un corredor nuevo</h1>
 
       {error && (
-        <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <IconoAlerta className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
       )}
 
-      <form onSubmit={handleSubmit} className="space-y-4 rounded-lg border border-slate-200 bg-white p-4">
+      <form onSubmit={handleSubmit} className="card space-y-4">
         <div>
-          <label className="mb-1 block text-sm text-slate-600" htmlFor="nombre">
+          <label className="mb-1 block text-sm text-muted-foreground" htmlFor="nombre">
             Nombre de usuario
           </label>
           <input
@@ -75,12 +79,12 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
             onChange={(e) => setNombre(e.target.value)}
             required
             autoFocus
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
+            className="input"
             placeholder="Ej. Mateo"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-slate-600" htmlFor="email">
+          <label className="mb-1 block text-sm text-muted-foreground" htmlFor="email">
             Correo electrónico
           </label>
           <input
@@ -89,27 +93,27 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
+            className="input"
             placeholder="papa@correo.com"
           />
-          <p className="mt-1 text-xs text-slate-400">
+          <p className="mt-1 text-xs text-muted-foreground">
             Lo usamos para el correo de bienvenida y para recuperar la contraseña si la olvidas.
           </p>
         </div>
         <div>
-          <label className="mb-1 block text-sm text-slate-600" htmlFor="categoria">
+          <label className="mb-1 block text-sm text-muted-foreground" htmlFor="categoria">
             Categoría (opcional)
           </label>
           <input
             id="categoria"
             value={categoria}
             onChange={(e) => setCategoria(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
+            className="input"
             placeholder="Ej. Cruiser, Expert"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-slate-600" htmlFor="edad">
+          <label className="mb-1 block text-sm text-muted-foreground" htmlFor="edad">
             Edad (opcional)
           </label>
           <input
@@ -119,31 +123,27 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
             max={99}
             value={edad}
             onChange={(e) => setEdad(e.target.value)}
-            className="w-full rounded-md border border-slate-300 px-3 py-2 focus:border-slate-500 focus:outline-none"
+            className="input"
           />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-slate-600" htmlFor="password">
+          <label className="mb-1 block text-sm text-muted-foreground" htmlFor="password">
             Contraseña
           </label>
           <CampoPassword id="password" value={password} onChange={setPassword} required autoComplete="new-password" />
         </div>
         <div>
-          <label className="mb-1 block text-sm text-slate-600" htmlFor="confirmar">
+          <label className="mb-1 block text-sm text-muted-foreground" htmlFor="confirmar">
             Confirmar contraseña
           </label>
           <CampoPassword id="confirmar" value={confirmar} onChange={setConfirmar} required autoComplete="new-password" />
         </div>
-        <button
-          type="submit"
-          disabled={creando}
-          className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700 disabled:opacity-50"
-        >
+        <button type="submit" disabled={creando} className="btn-primary w-full">
           {creando ? 'Creando...' : 'Registrarme'}
         </button>
       </form>
 
-      <button onClick={onIrALogin} className="w-full text-center text-sm text-slate-500 hover:text-slate-700">
+      <button onClick={onIrALogin} className="btn-ghost w-full text-center">
         ¿Ya tienes usuario? Inicia sesión
       </button>
     </div>

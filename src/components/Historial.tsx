@@ -1,21 +1,11 @@
 import { useEffect, useState } from 'react';
 import type { Corredor, Sesion, Intento } from '../lib/types';
 import { listarSesionesPorCorredor, listarIntentosPorCorredor } from '../lib/db';
+import { formatearTiempo } from '../lib/tiempo';
 
 interface Props {
   corredor: Corredor;
   onVolver: () => void;
-}
-
-function formatearTiempo(ms: number): string {
-  const totalCentesimas = Math.round(ms / 10);
-  const centesimas = totalCentesimas % 100;
-  const totalSeg = Math.floor(totalCentesimas / 100);
-  const seg = totalSeg % 60;
-  const min = Math.floor(totalSeg / 60);
-  const segTxt = min > 0 ? seg.toString().padStart(2, '0') : seg.toString();
-  const prefijo = min > 0 ? `${min}:` : '';
-  return `${prefijo}${segTxt}.${centesimas.toString().padStart(2, '0')}`;
 }
 
 function formatearFecha(ms: number): string {
@@ -65,45 +55,52 @@ export default function Historial({ corredor, onVolver }: Props) {
   }, [corredor.id]);
 
   if (cargando) {
-    return <p className="p-4 text-center text-slate-400">Cargando historial...</p>;
+    return <p className="p-4 text-center text-muted-foreground">Cargando historial...</p>;
   }
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-4">
-      <button onClick={onVolver} className="text-sm text-slate-500 hover:text-slate-700">
+      <button onClick={onVolver} className="btn-ghost">
         ← {corredor.nombre}
       </button>
 
-      <h1 className="text-xl font-bold text-slate-900">Historial</h1>
-      <p className="text-slate-500">{totalSesiones} sesiones registradas</p>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Historial</h1>
+        <p className="text-muted-foreground">{totalSesiones} sesiones registradas</p>
+      </div>
 
       {grupos.length === 0 ? (
-        <p className="text-slate-400">Todavía no hay tiempos guardados.</p>
+        <p className="text-muted-foreground">Todavía no hay tiempos guardados.</p>
       ) : (
         grupos.map((grupo) => {
           const mejor = Math.min(...grupo.intentos.map((i) => i.tiempoTotalMs));
           const promedio = grupo.intentos.reduce((acc, i) => acc + i.tiempoTotalMs, 0) / grupo.intentos.length;
 
           return (
-            <section key={grupo.distanciaMetros} className="rounded-lg border border-slate-200 bg-white p-4">
+            <section key={grupo.distanciaMetros} className="card">
               <div className="mb-3 flex items-baseline justify-between">
-                <h2 className="text-lg font-semibold text-slate-900">{grupo.distanciaMetros} m</h2>
-                <div className="text-right text-sm text-slate-500">
+                <h2 className="font-heading text-xl font-semibold text-foreground">{grupo.distanciaMetros} m</h2>
+                <div className="text-right text-sm text-muted-foreground">
                   <div>
-                    Mejor: <span className="font-mono font-semibold text-emerald-700">{formatearTiempo(mejor)}</span>
+                    Mejor:{' '}
+                    <span className="rounded-md bg-accent/15 px-1.5 py-0.5 font-heading font-semibold tabular-nums text-primary">
+                      {formatearTiempo(mejor)}
+                    </span>
                   </div>
                   <div>
-                    Promedio: <span className="font-mono">{formatearTiempo(promedio)}</span>
+                    Promedio: <span className="font-heading tabular-nums">{formatearTiempo(promedio)}</span>
                   </div>
                 </div>
               </div>
-              <ul className="divide-y divide-slate-100">
+              <ul className="divide-y divide-border">
                 {grupo.intentos.map((i) => (
                   <li key={i.id} className="flex items-center justify-between py-1.5 text-sm">
-                    <span className="text-slate-400">{formatearFecha(i.fechaSesion)}</span>
+                    <span className="text-muted-foreground">{formatearFecha(i.fechaSesion)}</span>
                     <span
-                      className={`font-mono font-medium ${
-                        i.tiempoTotalMs === mejor ? 'text-emerald-700' : 'text-slate-900'
+                      className={`font-heading font-medium tabular-nums ${
+                        i.tiempoTotalMs === mejor
+                          ? 'rounded-md bg-accent/15 px-1.5 py-0.5 text-primary'
+                          : 'text-foreground'
                       }`}
                     >
                       {formatearTiempo(i.tiempoTotalMs)}

@@ -6,7 +6,7 @@ export interface AdminVerificado {
   email: string;
 }
 
-function listaAdmins(): string[] {
+export function listaAdmins(): string[] {
   return (process.env.ADMIN_EMAILS ?? '')
     .split(',')
     .map((e) => e.trim().toLowerCase())

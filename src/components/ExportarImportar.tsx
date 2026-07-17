@@ -1,6 +1,7 @@
 import { useRef, useState } from 'react';
 import type { Corredor, BackupCorredor } from '../lib/types';
 import { exportarCorredor, importarCorredor } from '../lib/db';
+import { IconoAlerta, IconoCheck, IconoDescarga, IconoSubida } from './Icono';
 
 interface Props {
   corredor: Corredor;
@@ -35,7 +36,7 @@ export default function ExportarImportar({ corredor, onVolver }: Props) {
       const texto = await archivo.text();
       const backup = JSON.parse(texto) as BackupCorredor;
       if (backup.version !== 2 || !Array.isArray(backup.sesiones)) {
-        throw new Error('El archivo no tiene el formato esperado de respaldo de Sprints BMX.');
+        throw new Error('El archivo no tiene el formato esperado de respaldo de GATERIGHT BMX.');
       }
       await importarCorredor(backup, corredor.id);
       setMensaje(
@@ -51,39 +52,50 @@ export default function ExportarImportar({ corredor, onVolver }: Props) {
 
   return (
     <div className="mx-auto max-w-md space-y-6 p-4">
-      <button onClick={onVolver} className="text-sm text-slate-500 hover:text-slate-700">
+      <button onClick={onVolver} className="btn-ghost">
         ← {corredor.nombre}
       </button>
 
-      <h1 className="text-xl font-bold text-slate-900">Exportar / Importar</h1>
-      <p className="text-slate-500">
-        Tus datos ya viven en tu cuenta y están disponibles desde cualquier dispositivo donde inicies sesión.
-        Usa esto solo para tener un respaldo aparte o para juntar datos de un respaldo anterior.
-      </p>
+      <div>
+        <h1 className="text-2xl font-bold text-foreground">Exportar / Importar</h1>
+        <p className="text-muted-foreground">
+          Tus datos ya viven en tu cuenta y están disponibles desde cualquier dispositivo donde inicies sesión.
+          Usa esto solo para tener un respaldo aparte o para juntar datos de un respaldo anterior.
+        </p>
+      </div>
 
-      {error && <div className="rounded-md border border-red-300 bg-red-50 p-3 text-sm text-red-700">{error}</div>}
+      {error && (
+        <div className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-sm text-destructive">
+          <IconoAlerta className="mt-0.5 h-4 w-4 shrink-0" />
+          <span>{error}</span>
+        </div>
+      )}
       {mensaje && (
-        <div className="rounded-md border border-emerald-300 bg-emerald-50 p-3 text-sm text-emerald-700">
-          {mensaje}
+        <div className="flex items-start gap-2 rounded-lg border border-accent/30 bg-accent/10 p-3 text-sm text-primary">
+          <IconoCheck className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
+          <span>{mensaje}</span>
         </div>
       )}
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="mb-2 font-semibold text-slate-900">Exportar</h2>
-        <p className="mb-3 text-sm text-slate-500">
+      <section className="card">
+        <h2 className="mb-2 flex items-center gap-2 font-semibold text-foreground">
+          <IconoDescarga className="h-5 w-5 text-muted-foreground" />
+          Exportar
+        </h2>
+        <p className="mb-3 text-sm text-muted-foreground">
           Descarga un archivo .json con las sesiones y tiempos de {corredor.nombre}.
         </p>
-        <button
-          onClick={exportar}
-          className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700"
-        >
+        <button onClick={exportar} className="btn-primary w-full">
           Descargar respaldo de {corredor.nombre}
         </button>
       </section>
 
-      <section className="rounded-lg border border-slate-200 bg-white p-4">
-        <h2 className="mb-2 font-semibold text-slate-900">Importar</h2>
-        <p className="mb-3 text-sm text-slate-500">
+      <section className="card">
+        <h2 className="mb-2 flex items-center gap-2 font-semibold text-foreground">
+          <IconoSubida className="h-5 w-5 text-muted-foreground" />
+          Importar
+        </h2>
+        <p className="mb-3 text-sm text-muted-foreground">
           Sube un archivo .json exportado previamente. Se suma a la cuenta con la que iniciaste sesión ahora
           (no reemplaza lo que ya tienes guardado).
         </p>
@@ -93,7 +105,7 @@ export default function ExportarImportar({ corredor, onVolver }: Props) {
           accept="application/json"
           onChange={handleImportar}
           disabled={importando}
-          className="w-full text-sm text-slate-600"
+          className="block w-full cursor-pointer text-sm text-muted-foreground file:mr-3 file:cursor-pointer file:rounded-lg file:border-0 file:bg-primary file:px-3 file:py-2 file:font-semibold file:text-primary-foreground hover:file:opacity-90"
         />
       </section>
     </div>

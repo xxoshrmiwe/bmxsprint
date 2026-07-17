@@ -1,1 +1,97 @@
+@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Barlow:wght@400;500;600;700&display=swap');
 @import "tailwindcss";
+
+/**
+ * Sistema de diseño "GATERIGHT BMX" — paleta "Electric Start".
+ * Generado con ui-ux-pro-max (design-system/sprint-app/MASTER.md) y ajustado
+ * a la identidad de marca: navy sólido + verde eléctrico + semáforo rojo/amarillo/verde.
+ */
+@theme {
+  --color-navy: #001f3f;
+  --color-green: #00e676;
+  --color-red: #ff1744;
+  --color-yellow: #ffea00;
+
+  --color-primary: var(--color-navy);
+  --color-primary-foreground: #ffffff;
+  --color-accent: var(--color-green);
+  --color-accent-foreground: var(--color-navy);
+  --color-destructive: var(--color-red);
+  --color-destructive-foreground: #ffffff;
+  --color-warning: var(--color-yellow);
+  --color-warning-foreground: var(--color-navy);
+
+  --color-background: #ffffff;
+  --color-surface: #f1f5f9;
+  --color-foreground: var(--color-navy);
+  --color-muted-foreground: #47556b;
+  --color-border: #e2e8f0;
+  --color-ring: var(--color-green);
+
+  --font-heading: 'Barlow Condensed', ui-sans-serif, system-ui, sans-serif;
+  --font-sans: 'Barlow', ui-sans-serif, system-ui, sans-serif;
+}
+
+@layer base {
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  h1,
+  h2,
+  h3 {
+    @apply font-heading tracking-tight;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-ring);
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  .input {
+    @apply w-full rounded-lg border border-border bg-white px-3 py-2.5 text-foreground transition-colors duration-200 placeholder:text-muted-foreground/60 focus:border-accent focus:outline-none;
+  }
+
+  .btn-primary {
+    @apply cursor-pointer rounded-lg bg-primary px-4 py-3 font-semibold text-primary-foreground shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-md;
+  }
+
+  .btn-secondary {
+    @apply cursor-pointer rounded-lg border-2 border-primary px-4 py-3 font-semibold text-primary transition-colors duration-200 hover:bg-primary/5 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  .btn-ghost {
+    @apply inline-flex min-h-11 cursor-pointer items-center justify-center rounded-lg px-3 text-sm font-medium text-muted-foreground transition-colors duration-200 hover:bg-surface hover:text-primary active:bg-surface;
+  }
+
+  .card {
+    @apply rounded-xl border border-border bg-surface p-4 shadow-sm;
+  }
+}
+
+@keyframes flotar {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-6px);
+  }
+}
+
+.idea-bombilla {
+  animation: flotar 3s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
