@@ -25,6 +25,7 @@ export default function AdminApp() {
   const [entrando, setEntrando] = useState(false);
 
   const [estadoRecuperacion, setEstadoRecuperacion] = useState<Record<string, 'enviando' | 'enviado' | 'error'>>({});
+  const [erroresRecuperacion, setErroresRecuperacion] = useState<Record<string, string>>({});
 
   async function cargarDashboard() {
     try {
@@ -68,7 +69,10 @@ export default function AdminApp() {
     try {
       await enviarRecuperacion(usuarioEmail);
       setEstadoRecuperacion((prev) => ({ ...prev, [usuarioEmail]: 'enviado' }));
-    } catch {
+    } catch (err) {
+      const mensaje = err instanceof Error ? err.message : 'Error desconocido';
+      console.error('Error al enviar recuperación para', usuarioEmail, ':', mensaje);
+      setErroresRecuperacion((prev) => ({ ...prev, [usuarioEmail]: mensaje }));
       setEstadoRecuperacion((prev) => ({ ...prev, [usuarioEmail]: 'error' }));
     }
   }
@@ -220,6 +224,7 @@ export default function AdminApp() {
                     <button
                       onClick={() => handleRecuperar(u.email)}
                       disabled={estado === 'enviando'}
+                      title={estado === 'error' ? erroresRecuperacion[u.email] : undefined}
                       className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       {estado === 'enviando'
@@ -230,6 +235,9 @@ export default function AdminApp() {
                             ? 'Error, reintentar'
                             : 'Enviar recuperación'}
                     </button>
+                    {estado === 'error' && erroresRecuperacion[u.email] && (
+                      <p className="mt-1 max-w-[16rem] text-xs text-destructive">{erroresRecuperacion[u.email]}</p>
+                    )}
                   </td>
                 </tr>
               );
