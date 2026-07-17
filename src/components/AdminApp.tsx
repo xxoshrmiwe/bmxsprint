@@ -1,7 +1,13 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { iniciarSesion, cerrarSesion } from '../lib/cuenta';
-import { obtenerDatosAdmin, enviarRecuperacion, type DatosAdmin } from '../lib/adminApi';
+import {
+  obtenerDatosAdmin,
+  enviarRecuperacion,
+  eliminarCorredor,
+  generarEnlaceEntrarComo,
+  type DatosAdmin
+} from '../lib/adminApi';
 import CampoPassword from './CampoPassword';
 import OlvideContrasena from './OlvideContrasena';
 import { IconoAlerta, IconoBuscar } from './Icono';
@@ -26,6 +32,12 @@ export default function AdminApp() {
 
   const [estadoRecuperacion, setEstadoRecuperacion] = useState<Record<string, 'enviando' | 'enviado' | 'error'>>({});
   const [erroresRecuperacion, setErroresRecuperacion] = useState<Record<string, string>>({});
+
+  const [estadoEliminar, setEstadoEliminar] = useState<Record<string, 'eliminando' | 'error'>>({});
+  const [erroresEliminar, setErroresEliminar] = useState<Record<string, string>>({});
+
+  const [estadoEntrar, setEstadoEntrar] = useState<Record<string, 'entrando' | 'error'>>({});
+  const [erroresEntrar, setErroresEntrar] = useState<Record<string, string>>({});
 
   async function cargarDashboard() {
     try {
@@ -74,6 +86,42 @@ export default function AdminApp() {
       console.error('Error al enviar recuperación para', usuarioEmail, ':', mensaje);
       setErroresRecuperacion((prev) => ({ ...prev, [usuarioEmail]: mensaje }));
       setEstadoRecuperacion((prev) => ({ ...prev, [usuarioEmail]: 'error' }));
+    }
+  }
+
+  async function handleEliminar(id: string, nombre: string, usuarioEmail: string) {
+    const confirmado = window.confirm(
+      `¿Seguro que querés eliminar la cuenta de ${nombre} (${usuarioEmail})? Se borran todos sus entrenamientos y no se puede deshacer.`
+    );
+    if (!confirmado) return;
+
+    setEstadoEliminar((prev) => ({ ...prev, [id]: 'eliminando' }));
+    try {
+      await eliminarCorredor(id, usuarioEmail);
+      setDatos((prev) => (prev ? { ...prev, usuarios: prev.usuarios.filter((u) => u.id !== id) } : prev));
+    } catch (err) {
+      const mensaje = err instanceof Error ? err.message : 'Error desconocido';
+      console.error('Error al eliminar', usuarioEmail, ':', mensaje);
+      setErroresEliminar((prev) => ({ ...prev, [id]: mensaje }));
+      setEstadoEliminar((prev) => ({ ...prev, [id]: 'error' }));
+    }
+  }
+
+  async function handleEntrarComo(usuarioEmail: string) {
+    setEstadoEntrar((prev) => ({ ...prev, [usuarioEmail]: 'entrando' }));
+    try {
+      const link = await generarEnlaceEntrarComo(usuarioEmail);
+      window.open(link, '_blank');
+      setEstadoEntrar((prev) => {
+        const copia = { ...prev };
+        delete copia[usuarioEmail];
+        return copia;
+      });
+    } catch (err) {
+      const mensaje = err instanceof Error ? err.message : 'Error desconocido';
+      console.error('Error al generar enlace para entrar como', usuarioEmail, ':', mensaje);
+      setErroresEntrar((prev) => ({ ...prev, [usuarioEmail]: mensaje }));
+      setEstadoEntrar((prev) => ({ ...prev, [usuarioEmail]: 'error' }));
     }
   }
 
@@ -205,11 +253,15 @@ export default function AdminApp() {
               <th className="px-3 py-2">Intentos</th>
               <th className="px-3 py-2">Última sesión</th>
               <th className="px-3 py-2"></th>
+              <th className="px-3 py-2"></th>
+              <th className="px-3 py-2"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
             {usuariosFiltrados.map((u) => {
               const estado = estadoRecuperacion[u.email];
+              const estadoElim = estadoEliminar[u.id];
+              const estadoEntr = estadoEntrar[u.email];
               return (
                 <tr key={u.id} className="transition-colors duration-150 hover:bg-surface">
                   <td className="px-3 py-2 font-medium text-foreground">{u.nombre}</td>
@@ -239,12 +291,42 @@ export default function AdminApp() {
                       <p className="mt-1 max-w-[16rem] text-xs text-destructive">{erroresRecuperacion[u.email]}</p>
                     )}
                   </td>
+                  <td className="px-3 py-2">
+                    <button
+                      onClick={() => handleEntrarComo(u.email)}
+                      disabled={estadoEntr === 'entrando'}
+                      title={
+                        estadoEntr === 'error'
+                          ? erroresEntrar[u.email]
+                          : 'Abre una pestaña nueva logueado como este corredor'
+                      }
+                      className="cursor-pointer rounded-md border border-border px-2 py-1 text-xs font-medium text-muted-foreground transition-colors duration-150 hover:bg-surface disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {estadoEntr === 'entrando' ? 'Generando...' : estadoEntr === 'error' ? 'Error, reintentar' : 'Entrar como'}
+                    </button>
+                    {estadoEntr === 'error' && erroresEntrar[u.email] && (
+                      <p className="mt-1 max-w-[16rem] text-xs text-destructive">{erroresEntrar[u.email]}</p>
+                    )}
+                  </td>
+                  <td className="px-3 py-2">
+                    <button
+                      onClick={() => handleEliminar(u.id, u.nombre, u.email)}
+                      disabled={estadoElim === 'eliminando'}
+                      title={estadoElim === 'error' ? erroresEliminar[u.id] : undefined}
+                      className="cursor-pointer rounded-md border border-destructive/30 px-2 py-1 text-xs font-medium text-destructive transition-colors duration-150 hover:bg-destructive/5 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      {estadoElim === 'eliminando' ? 'Eliminando...' : estadoElim === 'error' ? 'Error, reintentar' : 'Eliminar'}
+                    </button>
+                    {estadoElim === 'error' && erroresEliminar[u.id] && (
+                      <p className="mt-1 max-w-[16rem] text-xs text-destructive">{erroresEliminar[u.id]}</p>
+                    )}
+                  </td>
                 </tr>
               );
             })}
             {usuariosFiltrados.length === 0 && (
               <tr>
-                <td colSpan={9} className="px-3 py-6 text-center text-muted-foreground">
+                <td colSpan={11} className="px-3 py-6 text-center text-muted-foreground">
                   No hay corredores que coincidan.
                 </td>
               </tr>

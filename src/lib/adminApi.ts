@@ -54,3 +54,31 @@ export async function enviarRecuperacion(email: string): Promise<void> {
     throw new Error(cuerpo.error ?? 'No se pudo enviar el correo.');
   }
 }
+
+export async function eliminarCorredor(id: string, email: string): Promise<void> {
+  const headers = await encabezadoAuth();
+  const res = await fetch('/api/admin/eliminar', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, email })
+  });
+  if (!res.ok) {
+    const cuerpo = await res.json().catch(() => ({}));
+    throw new Error(cuerpo.error ?? 'No se pudo eliminar la cuenta.');
+  }
+}
+
+export async function generarEnlaceEntrarComo(email: string): Promise<string> {
+  const headers = await encabezadoAuth();
+  const res = await fetch('/api/admin/entrar-como', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  if (!res.ok) {
+    const cuerpo = await res.json().catch(() => ({}));
+    throw new Error(cuerpo.error ?? 'No se pudo generar el enlace.');
+  }
+  const { link } = await res.json();
+  return link;
+}
