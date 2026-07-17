@@ -14,6 +14,7 @@ export async function registrarCorredor(datos: DatosRegistro): Promise<{ sesionA
     email: datos.email,
     password: datos.password,
     options: {
+      emailRedirectTo: window.location.origin,
       data: {
         nombre: datos.nombre,
         categoria: datos.categoria ?? null,
