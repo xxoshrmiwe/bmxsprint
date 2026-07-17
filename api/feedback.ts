@@ -52,7 +52,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'GATERIGHT BMX <onboarding@resend.dev>',
+        from: 'GATERIGHT BMX <ideas@gaterightbmx.com>',
         to: [destinatario],
         subject: 'Nueva idea en GATERIGHT BMX',
         html: `<p>${escaparHtml(mensaje).replace(/\n/g, '<br>')}</p>`
