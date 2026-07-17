@@ -63,6 +63,21 @@ Ruta oculta (no está linkeada en ningún menú, y lleva `noindex` + está bloqu
 - `api/admin/data.ts`: verifica el token contra `ADMIN_EMAILS`, y si es admin, usa la `service_role key` (que salta el Row Level Security) para traer todos los corredores, sus estadísticas y sus correos.
 - `api/admin/recuperar.ts`: dispara el correo de "recuperar contraseña" (plantilla "Reset password" de Supabase) para el corredor que elijas desde la tabla.
 
+## Buzón de ideas (bombillo flotante)
+
+El bombillo flotante que aparece en toda la app abre una caja de comentarios; lo que se escribe ahí llega por correo usando [Resend](https://resend.com) (gratis hasta 3,000 correos/mes, no requiere dominio propio para empezar).
+
+1. Creá una cuenta gratis en [resend.com](https://resend.com) y copiá tu **API Key** desde el dashboard.
+2. Variables de entorno necesarias (server-only, sin prefijo `PUBLIC_`):
+   ```
+   RESEND_API_KEY=tu-resend-api-key
+   FEEDBACK_TO_EMAIL=oscargonzalez0710@gmail.com
+   ```
+3. En Vercel, cargá esas mismas variables en **Settings → Environment Variables**.
+4. Por defecto los correos se mandan desde `onboarding@resend.dev` (el remitente de pruebas de Resend, funciona sin verificar un dominio). Si más adelante querés que salgan desde un correo propio (ej. `ideas@gaterightbmx.com`), hay que verificar ese dominio en Resend y cambiar el `from` en [`api/feedback.ts`](api/feedback.ts).
+
+`api/feedback.ts` valida el mensaje (no vacío, máximo 2000 caracteres) y descarta en silencio los envíos que llenen el campo trampa oculto (protección básica contra bots), antes de mandar el correo.
+
 ## Cómo agregar los audios de salida (gate)
 
 1. Coloca tus archivos `.mp3`, `.wav`, `.ogg` o `.m4a` en [`src/assets/gate/`](src/assets/gate/).
@@ -97,12 +112,13 @@ api/
 ├── _lib/
 │   ├── supabaseAdmin.ts   # Cliente de Supabase con la service_role key (solo servidor)
 │   └── verificarAdmin.ts  # Valida el token del caller contra ADMIN_EMAILS
-└── admin/
-    ├── data.ts        # GET: corredores + estadísticas (requiere ser admin)
-    └── recuperar.ts   # POST: dispara el correo de recuperación de un corredor
+├── admin/
+│   ├── data.ts        # GET: corredores + estadísticas (requiere ser admin)
+│   └── recuperar.ts   # POST: dispara el correo de recuperación de un corredor
+└── feedback.ts        # POST: manda por correo (Resend) lo que se escribe en el bombillo flotante
 src/
 ├── assets/gate/       # Audios de salida (.mp3/.wav/.ogg/.m4a) — los subes tú
-├── components/        # Componentes React (registro, login, recuperar contraseña, sesión, gate timer, historial, export/import, admin)
+├── components/        # Componentes React (registro, login, recuperar contraseña, sesión, gate timer, historial, export/import, admin, bombillo de ideas)
 ├── layouts/           # Layout de Astro (importa Tailwind)
 ├── lib/
 │   ├── audio.ts       # Detecta y elige al azar un audio de gate

@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import IdeaFlotante from '../components/IdeaFlotante';
 
 interface Props {
   title?: string;
@@ -25,5 +26,6 @@ const { title = 'GATERIGHT BMX', noindex = false } = Astro.props;
   </head>
   <body class="min-h-dvh overscroll-none bg-background">
     <slot />
+    <IdeaFlotante client:only="react" />
   </body>
 </html>
