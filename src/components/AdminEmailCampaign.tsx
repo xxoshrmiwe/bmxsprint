@@ -11,65 +11,122 @@ const PLANTILLAS = [
   {
     nombre: '⚡ Recordatorio de Entrenamiento',
     asunto: '¡Es hora de entrenar tu salida en GATERIGHT BMX!',
-    html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0f172a; color: #ffffff; border-radius: 12px;">
-  <div style="text-align: center; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-    <h1 style="color: #f97316; margin: 0; font-size: 28px; text-transform: uppercase;">GATERIGHT BMX</h1>
-    <p style="color: #94a3b8; font-size: 14px; margin-top: 5px;">Potencia tu arranque de gate</p>
-  </div>
-  
-  <div style="padding: 24px 0;">
-    <h2 style="color: #ffffff; font-size: 20px;">¡Hola, corredor! 🏁</h2>
-    <p style="color: #cbd5e1; line-height: 1.6; font-size: 16px;">
-      Recuerda que la constancia es la clave para ganar centésimas en el gate drop. No dejes pasar el día sin hacer una sesión de arranques.
-    </p>
+    html: `<meta charset="UTF-8">
+<div style="background-color: #0b0f19; padding: 30px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <div style="max-width: 580px; margin: 0 auto; background-color: #151c2c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 30px rgba(0, 0, 0, 0.3);">
+    
+    <!-- Barra Superior de Gradiente Deportivo -->
+    <div style="height: 5px; background: linear-gradient(90deg, #059669 0%, #f97316 50%, #ea580c 100%);"></div>
 
-    <div style="background-color: #1e293b; padding: 16px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #059669;">
-      <p style="margin: 0; color: #059669; font-weight: bold;">💡 Consejo del día:</p>
-      <p style="margin: 5px 0 0 0; color: #94a3b8; font-size: 14px;">
-        Entrena 5 a 10 sprints con descansos completos para mejorar tus reflejos de reacción al sonido.
+    <!-- Encabezado de Marca -->
+    <div style="padding: 32px 32px 20px 32px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
+      <div style="display: inline-block; background-color: rgba(249, 115, 22, 0.12); color: #f97316; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(249, 115, 22, 0.2); margin-bottom: 12px;">
+        BMX RACING • ENTRENAMIENTO
+      </div>
+      <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
+        GATERIGHT <span style="color: #f97316;">BMX</span>
+      </h1>
+      <p style="color: #94a3b8; font-size: 13px; margin: 6px 0 0 0;">Medición de precisión para tu gate drop</p>
+    </div>
+
+    <!-- Cuerpo del Correo -->
+    <div style="padding: 32px;">
+      <h2 style="color: #ffffff; font-size: 20px; font-weight: 700; margin: 0 0 16px 0;">
+        ¡Hora de bajar centésimas a tu arranque! 🏁
+      </h2>
+      <p style="color: #cbd5e1; line-height: 1.6; font-size: 15px; margin: 0 0 20px 0;">
+        Recuerda que en el BMX la carrera se gana en los primeros 10 metros. Mantener tu racha de entrenamientos fuera de la pista es el secreto para reaccionar antes que nadie cuando cae la puerta.
+      </p>
+
+      <!-- Caja destacada de Tip de Entrenamiento -->
+      <div style="background: linear-gradient(135deg, rgba(5, 150, 105, 0.15) 0%, rgba(15, 23, 42, 0.6) 100%); border-left: 4px solid #059669; border-radius: 10px; padding: 18px; margin: 24px 0;">
+        <div style="color: #34d399; font-weight: 700; font-size: 13px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+          💡 Tip de Reacción del Día
+        </div>
+        <p style="color: #e2e8f0; font-size: 14px; line-height: 1.5; margin: 0;">
+          Realiza 5 sprints explosivos concentrándote en el <strong>último bip del audio</strong>. No intentes adivinar el ritmo; entrena tus reflejos al sonido.
+        </p>
+      </div>
+
+      <!-- Botón de Acción Principal -->
+      <div style="text-align: center; margin: 36px 0 16px 0;">
+        <a href="https://gaterightbmx.com/" style="background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-block; box-shadow: 0 10px 20px rgba(234, 88, 12, 0.3);">
+          Iniciar Sesión de Gate
+        </a>
+      </div>
+    </div>
+
+    <!-- Pie de Página -->
+    <div style="padding: 20px 32px; background-color: #0d1320; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+      <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0; font-weight: 500;">
+        GATERIGHT BMX — Entrena tu arranque donde estés
+      </p>
+      <p style="color: #475569; font-size: 11px; margin: 0;">
+        Recibiste este correo porque tienes una cuenta registrada en <a href="https://gaterightbmx.com" style="color: #f97316; text-decoration: none;">gaterightbmx.com</a>.
       </p>
     </div>
 
-    <div style="text-align: center; margin-top: 30px;">
-      <a href="https://gaterightbmx.vercel.app" style="background-color: #f97316; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; display: inline-block;">
-        Iniciar Entrenamiento Ahora
-      </a>
-    </div>
-  </div>
-
-  <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); color: #64748b; font-size: 12px;">
-    <p style="margin: 0;">GATERIGHT BMX — Entrena tu gate en cualquier lugar.</p>
   </div>
 </div>`
   },
   {
     nombre: '🚀 Nueva Actualización',
     asunto: 'Nuevas funciones disponibles en GATERIGHT BMX',
-    html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0f172a; color: #ffffff; border-radius: 12px;">
-  <div style="text-align: center; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1);">
-    <h1 style="color: #f97316; margin: 0; font-size: 28px; text-transform: uppercase;">GATERIGHT BMX</h1>
-  </div>
-  
-  <div style="padding: 24px 0;">
-    <h2 style="color: #ffffff; font-size: 20px;">¡Tenemos novedades para ti! 🎉</h2>
-    <p style="color: #cbd5e1; line-height: 1.6; font-size: 16px;">
-      Hemos agregado mejoras en la aplicación para ayudarte a medir con mayor precisión tus entrenamientos y llevar tus estadísticas al siguiente nivel.
-    </p>
+    html: `<meta charset="UTF-8">
+<div style="background-color: #0b0f19; padding: 30px 10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;">
+  <div style="max-width: 580px; margin: 0 auto; background-color: #151c2c; border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 16px; overflow: hidden; box-shadow: 0 20px 30px rgba(0, 0, 0, 0.3);">
+    
+    <!-- Barra Superior -->
+    <div style="height: 5px; background: linear-gradient(90deg, #3b82f6 0%, #059669 50%, #f97316 100%);"></div>
 
-    <ul style="color: #94a3b8; line-height: 1.8; font-size: 15px; padding-left: 20px;">
-      <li><strong style="color: #ffffff;">Mejores estadísticas:</strong> Seguimiento más detallado de tu promedio de tiempos.</li>
-      <li><strong style="color: #ffffff;">Calentamiento optimizado:</strong> Nuevas rutinas para evitar lesiones antes de correr.</li>
-    </ul>
-
-    <div style="text-align: center; margin-top: 30px;">
-      <a href="https://gaterightbmx.vercel.app" style="background-color: #059669; color: #ffffff; text-decoration: none; padding: 12px 28px; border-radius: 8px; font-weight: bold; display: inline-block;">
-        Probar la nueva versión
-      </a>
+    <!-- Encabezado -->
+    <div style="padding: 32px 32px 20px 32px; text-align: center; border-bottom: 1px solid rgba(255, 255, 255, 0.06);">
+      <div style="display: inline-block; background-color: rgba(5, 150, 105, 0.12); color: #34d399; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 2px; padding: 4px 12px; border-radius: 20px; border: 1px solid rgba(5, 150, 105, 0.2); margin-bottom: 12px;">
+        NOVEDADES DE LA APP
+      </div>
+      <h1 style="color: #ffffff; margin: 0; font-size: 30px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;">
+        GATERIGHT <span style="color: #f97316;">BMX</span>
+      </h1>
     </div>
-  </div>
 
-  <div style="text-align: center; padding-top: 20px; border-top: 1px solid rgba(255,255,255,0.1); color: #64748b; font-size: 12px;">
-    <p style="margin: 0;">GATERIGHT BMX — La app para corredores de BMX.</p>
+    <!-- Cuerpo -->
+    <div style="padding: 32px;">
+      <h2 style="color: #ffffff; font-size: 20px; font-weight: 700; margin: 0 0 16px 0;">
+        ¡Hemos actualizado tu experiencia! 🎉
+      </h2>
+      <p style="color: #cbd5e1; line-height: 1.6; font-size: 15px; margin: 0 0 24px 0;">
+        Seguimos trabajando para darte la herramienta más precisa de entrenamiento. Estas son las novedades que ya puedes usar en tu cuenta:
+      </p>
+
+      <div style="background-color: #1e293b; border-radius: 12px; padding: 20px; margin-bottom: 24px; border: 1px solid rgba(255, 255, 255, 0.05);">
+        <div style="margin-bottom: 16px;">
+          <h3 style="color: #f97316; font-size: 15px; font-weight: 700; margin: 0 0 4px 0;">📈 Estadísticas y Ritmo Lanzado</h3>
+          <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin: 0;">Medición mejorada descontando el arranque para comparar distancias de 10m a 50m con precisión.</p>
+        </div>
+        <div style="margin-bottom: 16px;">
+          <h3 style="color: #34d399; font-size: 15px; font-weight: 700; margin: 0 0 4px 0;">🎯 Pronóstico de Tiempos</h3>
+          <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin: 0;">Descubre cuál sería tu tiempo en cualquier distancia en función de tu mejor ritmo.</p>
+        </div>
+        <div>
+          <h3 style="color: #60a5fa; font-size: 15px; font-weight: 700; margin: 0 0 4px 0;">🌐 Dominio Oficial</h3>
+          <p style="color: #94a3b8; font-size: 13px; line-height: 1.5; margin: 0;">Accede ahora directamente desde tu navegador en <strong style="color: #ffffff;">gaterightbmx.com</strong>.</p>
+        </div>
+      </div>
+
+      <!-- Botón CTA -->
+      <div style="text-align: center; margin: 32px 0 16px 0;">
+        <a href="https://gaterightbmx.com/" style="background: linear-gradient(135deg, #059669 0%, #047857 100%); color: #ffffff; text-decoration: none; padding: 14px 32px; border-radius: 10px; font-size: 15px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; display: inline-block; box-shadow: 0 10px 20px rgba(5, 150, 105, 0.3);">
+          Ver Nuevas Funciones
+        </a>
+      </div>
+    </div>
+
+    <!-- Pie -->
+    <div style="padding: 20px 32px; background-color: #0d1320; text-align: center; border-top: 1px solid rgba(255, 255, 255, 0.06);">
+      <p style="color: #64748b; font-size: 12px; margin: 0 0 4px 0;">GATERIGHT BMX • La app para corredores de BMX</p>
+      <p style="color: #475569; font-size: 11px; margin: 0;"><a href="https://gaterightbmx.com" style="color: #f97316; text-decoration: none;">gaterightbmx.com</a></p>
+    </div>
+
   </div>
 </div>`
   }
