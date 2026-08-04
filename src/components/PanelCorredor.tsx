@@ -2,6 +2,7 @@ import { cerrarSesion } from '../lib/cuenta';
 import type { Corredor } from '../lib/types';
 import { IconoRayo, IconoGrafico, IconoDescarga } from './Icono';
 import DashboardCorredor from './DashboardCorredor';
+import InstallPrompt from './InstallPrompt';
 
 interface Props {
   corredor: Corredor;
@@ -28,6 +29,8 @@ export default function PanelCorredor({
       <button onClick={handleCerrarSesion} className="btn-ghost">
         ← Cerrar sesión
       </button>
+
+      <InstallPrompt />
 
       <div>
         <h1 className="text-3xl font-bold text-foreground">{corredor.nombre}</h1>

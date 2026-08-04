@@ -54,6 +54,8 @@ function BarraModoAdmin({ nombreCorredor }: { nombreCorredor?: string }) {
   );
 }
 
+import { InstallPwaProvider } from '../context/InstallPwaContext';
+
 export default function SprintApp() {
   const [vista, setVista] = useState<Vista>({ tipo: 'cargando' });
   const [esImpersonado, setEsImpersonado] = useState(false);
@@ -193,9 +195,11 @@ export default function SprintApp() {
   }
 
   return (
-    <div className="min-h-screen">
-      {esImpersonado && <BarraModoAdmin nombreCorredor={nombreCorredorActual} />}
-      {renderContenido()}
-    </div>
+    <InstallPwaProvider>
+      <div className="min-h-screen">
+        {esImpersonado && <BarraModoAdmin nombreCorredor={nombreCorredorActual} />}
+        {renderContenido()}
+      </div>
+    </InstallPwaProvider>
   );
 }

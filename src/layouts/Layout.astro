@@ -31,6 +31,14 @@ const { title = 'GATERIGHT BMX', noindex = false } = Astro.props;
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     {noindex && <meta name="robots" content="noindex, nofollow" />}
     <title>{title}</title>
+    <script is:inline>
+      window.deferredInstallPrompt = null;
+      window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        window.deferredInstallPrompt = e;
+        window.dispatchEvent(new CustomEvent('pwa-installable'));
+      });
+    </script>
   </head>
   <body class="min-h-dvh overscroll-none bg-background pwa-safe-area">
     <slot />
