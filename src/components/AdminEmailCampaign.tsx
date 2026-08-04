@@ -320,14 +320,31 @@ export default function AdminEmailCampaign({ emailAdmin, totalCorredores }: Prop
           )}
 
           {resultado && (
-            <div className="flex items-start gap-2 rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3 text-sm text-emerald-600">
-              <IconoCheck className="mt-0.5 h-4 w-4 shrink-0" />
-              <div>
-                <p className="font-medium">{resultado.mensaje ?? 'Campaña procesada con éxito.'}</p>
-                <p className="text-xs opacity-80">Enviados: {resultado.enviados} | Errores: {resultado.errores}</p>
+            <div className="rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-4 text-sm text-emerald-600 space-y-2">
+              <div className="flex items-start gap-2">
+                <IconoCheck className="mt-0.5 h-4 w-4 shrink-0" />
+                <div>
+                  <p className="font-medium">{resultado.mensaje ?? 'Campaña procesada con éxito.'}</p>
+                  <p className="text-xs opacity-80">Enviados con éxito: {resultado.enviados} | Omitidos/Errores: {resultado.errores}</p>
+                </div>
               </div>
+
+              {resultado.detallesErrores && resultado.detallesErrores.length > 0 && (
+                <div className="mt-3 border-t border-emerald-500/20 pt-2 text-xs">
+                  <p className="font-bold text-foreground mb-1.5">Detalle de correos omitidos o con error ({resultado.detallesErrores.length}):</p>
+                  <div className="max-h-40 overflow-y-auto space-y-1 rounded border border-border/40 bg-surface p-2 text-muted-foreground font-mono">
+                    {resultado.detallesErrores.map((item, idx) => (
+                      <div key={idx} className="flex flex-wrap items-center justify-between gap-2 border-b border-border/20 pb-1 last:border-0">
+                        <span className="font-medium text-foreground">{item.email}</span>
+                        <span className="text-destructive font-sans">{item.motivo}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           )}
+
 
           <div className="flex justify-end gap-3 pt-2">
             <button

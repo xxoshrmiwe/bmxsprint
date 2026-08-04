@@ -90,12 +90,19 @@ export interface ParametrosCampana {
   emailPrueba?: string;
 }
 
+export interface DetalleErrorEmail {
+  email: string;
+  motivo: string;
+}
+
 export interface ResultadoCampana {
   ok: boolean;
   enviados: number;
   errores: number;
   mensaje?: string;
+  detallesErrores?: DetalleErrorEmail[];
 }
+
 
 export async function enviarCampanaEmail(params: ParametrosCampana): Promise<ResultadoCampana> {
   const headers = await encabezadoAuth();

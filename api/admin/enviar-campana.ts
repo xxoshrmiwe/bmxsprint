@@ -8,11 +8,14 @@ const MAX_LARGO_HTML = 50000;
 // Lista de dominios ficticios/de prueba que Resend rechaza estrictamente
 const DOMINIOS_DISCARD = ['example.com', 'example.org', 'example.net', 'test.com', 'testing.com', 'localhost', 'invalid'];
 
-function esEmailValidoParaResend(email: string): boolean {
-  if (!email || !email.includes('@')) return false;
+function motivoEmailInvalido(email: string): string | null {
+  if (!email || !email.includes('@')) return 'Dirección de correo con formato inválido';
   const dominio = email.split('@')[1]?.toLowerCase().trim();
-  if (!dominio) return false;
-  return !DOMINIOS_DISCARD.some((d) => dominio === d || dominio.endsWith('.' + d));
+  if (!dominio) return 'Sin dominio de correo';
+  if (DOMINIOS_DISCARD.some((d) => dominio === d || dominio.endsWith('.' + d))) {
+    return `Dominio de prueba omitido (@${dominio})`;
+  }
+  return null;
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
@@ -57,6 +60,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     let destinatarios: string[] = [];
+    const detallesErrores: Array<{ email: string; motivo: string }> = [];
 
     if (esPrueba) {
       const emailDestino = (emailPrueba || admin.email).trim().toLowerCase();
@@ -74,18 +78,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return;
       }
 
-      destinatarios = (data.users ?? [])
-        .map((u) => u.email?.trim().toLowerCase())
-        .filter((e): e is string => Boolean(e && esEmailValidoParaResend(e)));
+      for (const u of data.users ?? []) {
+        const emailLower = u.email?.trim().toLowerCase();
+        if (!emailLower) continue;
 
-      if (destinatarios.length === 0) {
-        res.status(400).json({ error: 'No se encontraron corredores con correos válidos para envío.' });
+        const motivoInvalido = motivoEmailInvalido(emailLower);
+        if (motivoInvalido) {
+          detallesErrores.push({ email: emailLower, motivo: motivoInvalido });
+        } else {
+          destinatarios.push(emailLower);
+        }
+      }
+
+      if (destinatarios.length === 0 && detallesErrores.length === 0) {
+        res.status(400).json({ error: 'No se encontraron corredores con correo registrado.' });
         return;
       }
     }
 
     let totalEnviados = 0;
-    let totalErrores = 0;
     let ultimoErrorResend = '';
 
     // Enviar a los destinatarios mediante solicitudes individuales tolerantes a fallos (en paralelo de 5 en 5)
@@ -110,7 +121,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           });
 
           if (respuesta.ok) {
-            return { ok: true };
+            return { ok: true, email: destino };
           } else {
             const errorText = await respuesta.text();
             let msj = errorText;
@@ -120,10 +131,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             } catch {
               // usar errorText
             }
-            return { ok: false, error: msj };
+            return { ok: false, email: destino, error: msj };
           }
         } catch (err) {
-          return { ok: false, error: err instanceof Error ? err.message : 'Error de red' };
+          return { ok: false, email: destino, error: err instanceof Error ? err.message : 'Error de red' };
         }
       });
 
@@ -133,16 +144,19 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         if (r.ok) {
           totalEnviados++;
         } else {
-          totalErrores++;
+          detallesErrores.push({ email: r.email, motivo: r.error || 'Error al entregar correo' });
           if (r.error) ultimoErrorResend = r.error;
         }
       }
     }
 
+    const totalErrores = detallesErrores.length;
+
     if (totalEnviados === 0 && totalErrores > 0) {
       res.status(400).json({
         ok: false,
-        error: `Resend rechazó el envío: ${ultimoErrorResend || 'Verifica la configuración de tu cuenta.'}`
+        error: `Resend rechazó el envío: ${ultimoErrorResend || 'Verifica la configuración de tu cuenta.'}`,
+        detallesErrores
       });
       return;
     }
@@ -151,9 +165,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       ok: true,
       enviados: totalEnviados,
       errores: totalErrores,
+      detallesErrores,
       mensaje: esPrueba
         ? `Correo de prueba enviado con éxito a ${destinatarios[0]}.`
-        : `Campaña procesada: ${totalEnviados} correo(s) enviado(s) con éxito${totalErrores > 0 ? `, ${totalErrores} omitido(s)` : ''}.`
+        : `Campaña procesada: ${totalEnviados} correo(s) enviado(s) con éxito${totalErrores > 0 ? `, ${totalErrores} omitido(s)/error` : ''}.`
     });
   } catch (err) {
     console.error('Error al procesar envío de campaña de email:', err);
