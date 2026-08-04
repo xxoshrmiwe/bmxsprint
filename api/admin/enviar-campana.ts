@@ -2,8 +2,9 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 import { verificarAdmin } from '../_lib/verificarAdmin.js';
 import { obtenerClienteAdmin } from '../_lib/supabaseAdmin.js';
 
-const REMITENTE_DEFAULT = process.env.RESEND_FROM_EMAIL || 'GATERIGHT BMX <onboarding@resend.dev>';
+const REMITENTE_DEFAULT = process.env.RESEND_FROM_EMAIL || 'GATERIGHT BMX <noticias@gaterightbmx.com>';
 const MAX_LARGO_HTML = 50000;
+
 
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
