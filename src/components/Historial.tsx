@@ -92,13 +92,17 @@ export default function Historial({ corredor, onVolver }: Props) {
 
   async function handleBorrarSesion(sesionId: string, fechaMs: number, distancia: number) {
     const fechaTxt = formatearFechaCompleta(fechaMs);
-    if (
-      !window.confirm(
-        `¿Seguro que querés borrar la sesión completa del ${fechaTxt} (${distancia}m)? Se eliminarán todos sus sprints.`
-      )
-    ) {
+    const respuesta = window.prompt(
+      `⚠️ ELIMINAR SESIÓN COMPLETA:\nPara confirmar el borrado de la sesión del ${fechaTxt} (${distancia}m) y todos sus sprints, escribe la palabra BORRAR:`
+    );
+
+    if (!respuesta || respuesta.trim().toUpperCase() !== 'BORRAR') {
+      if (respuesta !== null) {
+        alert('Palabra de confirmación incorrecta. No se eliminó la sesión.');
+      }
       return;
     }
+
 
     setEliminandoId(sesionId);
     try {

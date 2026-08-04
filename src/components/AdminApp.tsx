@@ -97,10 +97,16 @@ export default function AdminApp() {
   }
 
   async function handleEliminar(id: string, nombre: string, usuarioEmail: string) {
-    const confirmado = window.confirm(
-      `¿Seguro que querés eliminar la cuenta de ${nombre} (${usuarioEmail})? Se borran todos sus entrenamientos y no se puede deshacer.`
+    const respuesta = window.prompt(
+      `⚠️ ACCIÓN IRREVERSIBLE:\nPara confirmar la eliminación permanente de la cuenta de ${nombre} (${usuarioEmail}) y todo su historial, escribe la palabra ELIMINAR en mayúsculas:`
     );
-    if (!confirmado) return;
+
+    if (!respuesta || respuesta.trim().toUpperCase() !== 'ELIMINAR') {
+      if (respuesta !== null) {
+        alert('Palabra de confirmación incorrecta. Se canceló la eliminación.');
+      }
+      return;
+    }
 
     setEstadoEliminar((prev) => ({ ...prev, [id]: 'eliminando' }));
     try {
@@ -113,6 +119,7 @@ export default function AdminApp() {
       setEstadoEliminar((prev) => ({ ...prev, [id]: 'error' }));
     }
   }
+
 
   async function handleEntrarComo(usuarioEmail: string) {
     setEstadoEntrar((prev) => ({ ...prev, [usuarioEmail]: 'entrando' }));
