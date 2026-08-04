@@ -8,6 +8,7 @@ import {
 } from '../lib/db';
 import { formatearTiempo } from '../lib/tiempo';
 import { IconoBasura } from './Icono';
+import GraficaSprint from './GraficaSprint';
 
 interface Props {
   corredor: Corredor;
@@ -32,6 +33,7 @@ export default function Historial({ corredor, onVolver }: Props) {
   const [sesionesConIntentos, setSesionesConIntentos] = useState<SesionConIntentos[]>([]);
   const [distanciaFiltro, setDistanciaFiltro] = useState<number | 'todas'>('todas');
   const [eliminandoId, setEliminandoId] = useState<string | null>(null);
+  const [intentoGrafica, setIntentoGrafica] = useState<Intento | null>(null);
 
   async function cargarHistorial() {
     setCargando(true);
@@ -102,7 +104,6 @@ export default function Historial({ corredor, onVolver }: Props) {
       }
       return;
     }
-
 
     setEliminandoId(sesionId);
     try {
@@ -230,10 +231,12 @@ export default function Historial({ corredor, onVolver }: Props) {
                   </button>
                 </div>
 
-                {/* LISTA VERTICAL DE INTENTOS (Diseño 1 columna responsivo móvil) */}
+                {/* LISTA VERTICAL DE INTENTOS */}
                 <div className="divide-y divide-border/60">
                   {sesion.intentos.map((intento) => {
                     const esMejor = intento.tiempoTotalMs === mejorTiempo;
+                    const vMs = Math.max(0, ...(intento.telemetria?.map((p) => p.v ?? 0) ?? []));
+                    const vKmh = (vMs * 3.6).toFixed(1);
                     return (
                       <div
                         key={intento.id}
@@ -241,14 +244,21 @@ export default function Historial({ corredor, onVolver }: Props) {
                           esMejor ? 'bg-emerald-500/5 -mx-1 px-2 rounded-lg' : ''
                         }`}
                       >
-                        {/* Lado Izquierdo: Número, Tiempo y Récord */}
+                        {/* Lado Izquierdo: Número, Tiempo, Velocidad Punta y Récord */}
                         <div className="flex items-center gap-3">
                           <span className="w-6 text-center text-xs font-bold text-muted-foreground/80 tabular-nums">
                             #{intento.numero}
                           </span>
-                          <span className="font-heading text-lg font-bold tabular-nums text-foreground">
-                            {formatearTiempo(intento.tiempoTotalMs)}
-                          </span>
+                          <div>
+                            <span className="font-heading text-lg font-bold tabular-nums text-foreground block">
+                              {formatearTiempo(intento.tiempoTotalMs)}
+                            </span>
+                            {vMs > 0 && (
+                              <span className="text-[10px] font-bold text-violet-500 block -mt-1">
+                                ⚡ {vKmh} km/h
+                              </span>
+                            )}
+                          </div>
 
                           {esMejor && (
                             <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-extrabold text-emerald-600">
@@ -257,16 +267,27 @@ export default function Historial({ corredor, onVolver }: Props) {
                           )}
                         </div>
 
-                        {/* Lado Derecho: BOTÓN BORRAR EN ROJO */}
-                        <button
-                          onClick={() => handleBorrarIntento(intento.id, sesion.id)}
-                          disabled={eliminandoId === intento.id}
-                          title="Eliminar intento"
-                          className="cursor-pointer flex items-center gap-1 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs font-semibold text-destructive transition-all hover:bg-destructive hover:text-white disabled:opacity-50"
-                        >
-                          <IconoBasura className="h-3.5 w-3.5" />
-                          <span>Borrar</span>
-                        </button>
+                        {/* Lado Derecho: BOTÓN TELEMETRÍA Y BOTÓN BORRAR */}
+                        <div className="flex items-center gap-2">
+                          {intento.telemetria && intento.telemetria.length > 0 && (
+                            <button
+                              onClick={() => setIntentoGrafica(intento)}
+                              className="cursor-pointer flex items-center gap-1 rounded-lg border border-primary/30 bg-primary/10 px-2.5 py-1.5 text-xs font-semibold text-primary transition-all hover:bg-primary hover:text-white"
+                              title="Ver gráfica de telemetría del sprint"
+                            >
+                              📊 Grafica
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleBorrarIntento(intento.id, sesion.id)}
+                            disabled={eliminandoId === intento.id}
+                            title="Eliminar intento"
+                            className="cursor-pointer flex items-center gap-1 rounded-lg border border-destructive/30 bg-destructive/10 px-2.5 py-1.5 text-xs font-semibold text-destructive transition-all hover:bg-destructive hover:text-white disabled:opacity-50"
+                          >
+                            <IconoBasura className="h-3.5 w-3.5" />
+                            <span>Borrar</span>
+                          </button>
+                        </div>
                       </div>
                     );
                   })}
@@ -275,6 +296,16 @@ export default function Historial({ corredor, onVolver }: Props) {
             );
           })}
         </div>
+      )}
+
+      {/* Modal de Gráfica de Telemetría */}
+      {intentoGrafica && intentoGrafica.telemetria && (
+        <GraficaSprint
+          telemetria={intentoGrafica.telemetria}
+          tiempoTotalMs={intentoGrafica.tiempoTotalMs}
+          numeroIntento={intentoGrafica.numero}
+          onCerrar={() => setIntentoGrafica(null)}
+        />
       )}
     </div>
   );

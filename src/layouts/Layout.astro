@@ -47,8 +47,20 @@ const { title = 'GATERIGHT BMX', noindex = false } = Astro.props;
     <script is:inline>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
-          navigator.serviceWorker.register('/sw.js').catch((err) => {
+          navigator.serviceWorker.register('/sw.js').then((registration) => {
+            // Forzar comprobación de versión en cada apertura de la app
+            registration.update();
+          }).catch((err) => {
             console.error('Error al registrar Service Worker PWA:', err);
+          });
+
+          // Si el Service Worker cambia de versión, recargar silenciosamente para refrescar componentes
+          let refreshing = false;
+          navigator.serviceWorker.addEventListener('controllerchange', () => {
+            if (!refreshing) {
+              refreshing = true;
+              window.location.reload();
+            }
           });
         });
       }

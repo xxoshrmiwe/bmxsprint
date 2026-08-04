@@ -17,6 +17,12 @@ export interface Sesion {
   notas?: string;
 }
 
+export interface PuntoTelemetria {
+  t: number; // tiempo transcurrido en ms
+  a: number; // magnitud de la fuerza/aceleración en m/s^2
+  v?: number; // velocidad GPS Doppler instantánea en m/s
+}
+
 export interface Intento {
   id: string;
   sesionId: string;
@@ -25,6 +31,7 @@ export interface Intento {
   audioId: string;
   tiempoTotalMs: number;
   creadoEn: number;
+  telemetria?: PuntoTelemetria[];
 }
 
 export interface Meta {

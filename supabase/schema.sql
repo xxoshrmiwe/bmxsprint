@@ -25,6 +25,7 @@ create table if not exists public.intentos (
   numero integer not null,
   audio_id text not null,
   tiempo_total_ms double precision not null,
+  telemetria jsonb,
   creado_en timestamptz not null default now()
 );
 

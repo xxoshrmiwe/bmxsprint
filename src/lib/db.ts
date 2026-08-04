@@ -57,6 +57,7 @@ export async function crearIntento(datos: {
   numero: number;
   audioId: string;
   tiempoTotalMs: number;
+  telemetria?: import('./types').PuntoTelemetria[];
 }): Promise<Intento> {
   const { data, error } = await supabase
     .from('intentos')
@@ -65,22 +66,15 @@ export async function crearIntento(datos: {
       corredor_id: datos.corredorId,
       numero: datos.numero,
       audio_id: datos.audioId,
-      tiempo_total_ms: datos.tiempoTotalMs
+      tiempo_total_ms: datos.tiempoTotalMs,
+      telemetria: datos.telemetria ?? null
     })
     .select()
     .single();
 
   if (error || !data) throw error ?? new Error('No se pudo guardar el intento');
 
-  return {
-    id: data.id,
-    sesionId: data.sesion_id,
-    corredorId: data.corredor_id,
-    numero: data.numero,
-    audioId: data.audio_id,
-    tiempoTotalMs: data.tiempo_total_ms,
-    creadoEn: new Date(data.creado_en).getTime()
-  };
+  return mapIntento(data);
 }
 
 export async function listarIntentosPorSesion(sesionId: string): Promise<Intento[]> {
@@ -115,7 +109,8 @@ function mapIntento(i: any): Intento {
     numero: i.numero,
     audioId: i.audio_id,
     tiempoTotalMs: i.tiempo_total_ms,
-    creadoEn: new Date(i.creado_en).getTime()
+    creadoEn: new Date(i.creado_en).getTime(),
+    telemetria: i.telemetria ?? undefined
   };
 }
 

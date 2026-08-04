@@ -1,6 +1,5 @@
-const CACHE_NAME = 'gateright-bmx-v1';
+const CACHE_NAME = 'gateright-bmx-v2';
 const ASSETS_TO_CACHE = [
-  '/',
   '/manifest.webmanifest',
   '/favicon.ico',
   '/icon-192.png',
@@ -8,6 +7,7 @@ const ASSETS_TO_CACHE = [
   '/icon-maskable-512.png'
 ];
 
+// 1. Instalar e inmediatamente tomar control sin esperar a cerrar pestañas
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
@@ -16,6 +16,7 @@ self.addEventListener('install', (event) => {
   );
 });
 
+// 2. Limpiar cachés antiguas y reclamar clientes inmediatamente
 self.addEventListener('activate', (event) => {
   event.waitUntil(
     caches.keys().then((keys) => {
@@ -26,21 +27,45 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+// 3. Estrategia Network-First para Navegación (HTML / Páginas principales)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
-  
+
+  const isHTMLRequest = event.request.mode === 'navigate' ||
+    (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'));
+
+  if (isHTMLRequest) {
+    // RED PRIMERO (Network First) para asegurar siempre la versión más reciente del servidor
+    event.respondWith(
+      fetch(event.request)
+        .then((networkResponse) => {
+          if (networkResponse && networkResponse.status === 200) {
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
+          }
+          return networkResponse;
+        })
+        .catch(() => {
+          // Si está offline, usar la versión en caché guardada
+          return caches.match(event.request).then((cached) => cached || caches.match('/'));
+        })
+    );
+    return;
+  }
+
+  // Stale-While-Revalidate para recursos estáticos (imágenes, scripts bundle)
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
-      if (cachedResponse) {
-        // Devuelve la respuesta en caché e intenta actualizar en segundo plano
-        fetch(event.request).then((networkResponse) => {
+      const fetchPromise = fetch(event.request)
+        .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
             caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
           }
-        }).catch(() => {});
-        return cachedResponse;
-      }
-      return fetch(event.request);
+          return networkResponse;
+        })
+        .catch(() => {});
+
+      return cachedResponse || fetchPromise;
     })
   );
 });

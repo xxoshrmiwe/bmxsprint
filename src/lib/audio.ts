@@ -10,8 +10,9 @@ const modulos = import.meta.glob('/src/assets/gate/*.{mp3,wav,ogg,m4a}', {
 }) as Record<string, string>;
 
 export function listarClipsGate(): ClipGate[] {
-  return Object.entries(modulos).map(([ruta, url]) => {
+  return Object.entries(modulos).map(([ruta, item]) => {
     const nombre = ruta.split('/').pop() ?? ruta;
+    const url = typeof item === 'string' ? item : (item as any)?.src || (item as any)?.default || String(item);
     return { id: nombre, url, nombre };
   });
 }

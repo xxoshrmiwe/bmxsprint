@@ -1,9 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Sesion, Intento } from '../lib/types';
+import type { Sesion, Intento, PuntoTelemetria } from '../lib/types';
 import { elegirClipAleatorio, type ClipGate } from '../lib/audio';
 import { crearIntento, eliminarIntento } from '../lib/db';
 import { formatearTiempo } from '../lib/tiempo';
 import { IconoAlerta, IconoBasura } from './Icono';
+import GraficaSprint from './GraficaSprint';
+import { guardarRunCrudo, exportarRunCSV, type SampleCrudo, type GpsSampleCrudo, type RunCrudo } from '../lib/loggerDb';
 
 interface Props {
   sesion: Sesion;
@@ -43,6 +45,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   const [intentosSesion, setIntentosSesion] = useState<Intento[]>([]);
   const [guardando, setGuardando] = useState(false);
   const [conteoBolsillo, setConteoBolsillo] = useState(10);
+  const [graficaModal, setGraficaModal] = useState<{ telemetria: PuntoTelemetria[]; tiempoMs: number; numero?: number } | null>(null);
 
   const esModoSolo = sesion.modoMedicion === 'acelerometro';
 
@@ -54,52 +57,143 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   const iniciadoRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
+  const telemetriaRef = useRef<PuntoTelemetria[]>([]);
+  const ultimaMuestraMsRef = useRef<number>(0);
+
+  // Refs de GPS Doppler y Calibración ZUPT (Exclusivo Modo Solo)
+  const watchGpsIdRef = useRef<number | null>(null);
+  const velocidadGpsRef = useRef<number>(0);
+  const biasZuptRef = useRef<number>(0);
+  const muestrasZuptRef = useRef<number[]>([]);
+
+  // Refs del Logger Crudo CSV (Paso 0)
+  const muestrasCrudasRef = useRef<SampleCrudo[]>([]);
+  const gpsCrudoRef = useRef<GpsSampleCrudo[]>([]);
+  const [ultimoRunCrudo, setUltimoRunCrudo] = useState<RunCrudo | null>(null);
 
   useEffect(() => {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (anticipoRef.current) clearTimeout(anticipoRef.current);
       if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+      if (watchGpsIdRef.current !== null && typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+        navigator.geolocation.clearWatch(watchGpsIdRef.current);
+      }
       audioCtxRef.current?.close();
     };
   }, []);
 
-  // Monitoreo de Acelerómetro para Modo Solo (Bolsillo)
+  // Monitor de GPS Doppler (watchPosition) — Exclusivo Modo Solo
+  useEffect(() => {
+    if (!esModoSolo || (estado !== 'preparando_bolsillo' && estado !== 'corriendo')) {
+      if (watchGpsIdRef.current !== null && typeof navigator !== 'undefined' && 'geolocation' in navigator) {
+        navigator.geolocation.clearWatch(watchGpsIdRef.current);
+        watchGpsIdRef.current = null;
+      }
+      return;
+    }
+
+    if (typeof navigator !== 'undefined' && 'geolocation' in navigator && watchGpsIdRef.current === null) {
+      velocidadGpsRef.current = 0;
+      watchGpsIdRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          if (pos.coords && typeof pos.coords.speed === 'number' && pos.coords.speed >= 0) {
+            velocidadGpsRef.current = pos.coords.speed;
+          }
+          // Registrar muestra de GPS cruda para el CSV
+          gpsCrudoRef.current.push({
+            t: performance.now(),
+            tFix: pos.timestamp,
+            speed: pos.coords.speed,
+            accuracy: pos.coords.accuracy,
+            lat: pos.coords.latitude,
+            lon: pos.coords.longitude
+          });
+        },
+        (err) => {
+          console.warn('GPS Doppler error/unsupported:', err.message);
+        },
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 5000 }
+      );
+    }
+  }, [estado, esModoSolo]);
+
+  // Monitoreo de Acelerómetro para Modo Solo (Bolsillo) — Detención por Frenado Total con ZUPT y Doppler
   useEffect(() => {
     if (estado !== 'corriendo' || !esModoSolo) return;
 
-    let ultimoPico = 0;
+    let movimientoRegistrado = false;
+    let lecturasQuietoConsecutivas = 0;
+
+    // Muestras consecutivas de teléfono quieto requeridas (~300ms a 500ms de detención total)
+    const MUESTRAS_QUIETO_REQUERIDAS = 10;
+
     function handleMotion(e: DeviceMotionEvent) {
-      // 1. Evaluar Aceleración Dinámica Pura (iOS iPhone 15 sin gravedad)
+      // Registrar muestra cruda completa para el CSV (Paso 0)
+      muestrasCrudasRef.current.push({
+        t: performance.now(),
+        ax: e.acceleration?.x ?? 0,
+        ay: e.acceleration?.y ?? 0,
+        az: e.acceleration?.z ?? 0,
+        gx: e.accelerationIncludingGravity?.x ?? 0,
+        gy: e.accelerationIncludingGravity?.y ?? 0,
+        gz: e.accelerationIncludingGravity?.z ?? 0,
+        rx: e.rotationRate?.alpha ?? 0,
+        ry: e.rotationRate?.beta ?? 0,
+        rz: e.rotationRate?.gamma ?? 0,
+        interval: e.interval ?? 16.6,
+        src: e.acceleration ? 'fused' : 'lowpass'
+      });
+
+      // 1. Evaluar Aceleración Dinámica Pura (iOS Safari / Android Chrome)
       let magDinamica = 0;
-      if (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null)) {
+      if (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null || e.acceleration.z !== null)) {
         const ax = e.acceleration.x ?? 0;
         const ay = e.acceleration.y ?? 0;
         const az = e.acceleration.z ?? 0;
         magDinamica = Math.sqrt(ax * ax + ay * ay + az * az);
-      }
-
-      // 2. Evaluar Aceleración con Gravedad (Android / fallback)
-      let magConGravedad = 0;
-      if (e.accelerationIncludingGravity) {
+      } else if (e.accelerationIncludingGravity) {
         const gx = e.accelerationIncludingGravity.x ?? 0;
         const gy = e.accelerationIncludingGravity.y ?? 0;
         const gz = e.accelerationIncludingGravity.z ?? 0;
-        magConGravedad = Math.sqrt(gx * gx + gy * gy + gz * gz);
+        const magTotal = Math.sqrt(gx * gx + gy * gy + gz * gz);
+        magDinamica = Math.max(0, magTotal - 9.81);
       }
 
-      // Ignorar los primeros 1.5s iniciales (potencia de salida del gate)
+      // Descontar la calibración ZUPT obtenida en el partidor
+      const nivelMovimiento = Math.max(0, magDinamica - biasZuptRef.current);
       const tiempoCorrido = performance.now() - inicioRef.current;
-      if (tiempoCorrido < 1500) return;
+      const velocidadDoppler = velocidadGpsRef.current;
 
-      // Umbrales adaptativos de frenado tras la meta:
-      // - Desaceleración dinámica pura (iOS iPhone 15): > 11.5 m/s^2
-      // - Fuerza total con gravedad (Android): > 17.0 m/s^2
-      const esDesaceleracionMeta = magDinamica > 11.5 || magConGravedad > 17.0;
+      // Capturar punto de telemetría cada ~40ms (Fuerza G + Velocidad GPS Doppler)
+      if (tiempoCorrido - ultimaMuestraMsRef.current >= 40) {
+        ultimaMuestraMsRef.current = tiempoCorrido;
+        telemetriaRef.current.push({
+          t: Math.round(tiempoCorrido),
+          a: Math.round(nivelMovimiento * 10) / 10,
+          v: Math.round(velocidadDoppler * 10) / 10
+        });
+      }
 
-      if (esDesaceleracionMeta && tiempoCorrido > ultimoPico + 1000) {
-        ultimoPico = tiempoCorrido;
-        detener();
+      // Confirmar que el atleta ya arrancó a pedalear / moverse
+      if (nivelMovimiento > 2.0 || velocidadDoppler > 1.5) {
+        movimientoRegistrado = true;
+      }
+
+      // Ignorar durante el primer segundo inicial de arranque
+      if (tiempoCorrido < 1000) return;
+
+      // El celular se considera "Totalmente Quieto" cuando el movimiento cae por debajo de 1.8 m/s^2 y la velocidad GPS es baja
+      const estaQuieto = nivelMovimiento < 1.8 && velocidadDoppler < 1.0;
+
+      if (movimientoRegistrado && estaQuieto) {
+        lecturasQuietoConsecutivas++;
+        if (lecturasQuietoConsecutivas >= MUESTRAS_QUIETO_REQUERIDAS) {
+          detener();
+        }
+      } else {
+        // Mientras esté en movimiento o pedaleando, reiniciar el contador de quieto
+        lecturasQuietoConsecutivas = 0;
       }
     }
 
@@ -107,7 +201,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     return () => {
       window.removeEventListener('devicemotion', handleMotion);
     };
-  }, [estado, esModoSolo]);
+  }, [estado, esModoSolo, sesion.distanciaMetros]);
 
   function asegurarGananciaAudio() {
     const audio = audioRef.current;
@@ -134,39 +228,65 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     iniciadoRef.current = true;
     if (anticipoRef.current) clearTimeout(anticipoRef.current);
     inicioRef.current = performance.now();
+    telemetriaRef.current = [];
+    muestrasCrudasRef.current = [];
+    gpsCrudoRef.current = [];
+    ultimaMuestraMsRef.current = 0;
     setEstado('corriendo');
     iniciarLoop();
   }
 
-  function reproducirSalida() {
+  function reproducirSalidaConClip(elegidoClip?: ClipGate) {
     setError(null);
     iniciadoRef.current = false;
     try {
-      const elegido = elegirClipAleatorio();
+      const elegido = elegidoClip || clip || elegirClipAleatorio();
       setClip(elegido);
       setElapsedMs(0);
       setEstado('reproduciendo');
 
       const audio = audioRef.current;
       if (!audio) return;
+
       audio.src = elegido.url;
       audio.load();
       asegurarGananciaAudio();
-      audioCtxRef.current?.resume();
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+
+      const programarSalida = () => {
+        const duracionMs = Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration * 1000 : 0;
+        // Si el audio es corto (< 2.5s), anticipar solo 300ms; si es largo, anticipar ANTICIPO_MS (2000ms)
+        const anticipoFinal = duracionMs > 2500 ? ANTICIPO_MS : 300;
+        const esperaMs = Math.max(100, duracionMs - anticipoFinal);
+
+        if (anticipoRef.current) clearTimeout(anticipoRef.current);
+        anticipoRef.current = window.setTimeout(iniciarCronometro, esperaMs);
+      };
+
       audio
         .play()
         .then(() => {
-          const duracionMs = Number.isFinite(audio.duration) ? audio.duration * 1000 : 0;
-          const esperaMs = Math.max(0, duracionMs - ANTICIPO_MS);
-          anticipoRef.current = window.setTimeout(iniciarCronometro, esperaMs);
+          if (audio.duration && Number.isFinite(audio.duration)) {
+            programarSalida();
+          } else {
+            audio.onloadedmetadata = programarSalida;
+          }
         })
         .catch((err) => {
-          setError('No se pudo reproducir el audio: ' + err.message);
+          console.error('Error al reproducir audio del gate:', err);
+          setError('El navegador bloqueó la reproducción automática. Toca el botón de nuevo para escuchar la salida.');
           setEstado('listo');
         });
     } catch (err) {
       setError(err instanceof Error ? err.message : String(err));
+      setEstado('listo');
     }
+  }
+
+  function reproducirSalida() {
+    reproducirSalidaConClip();
   }
 
   async function iniciarPrebucleBolsillo() {
@@ -193,8 +313,10 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       audio.src = elegido.url;
       audio.load();
       asegurarGananciaAudio();
-      audioCtxRef.current?.resume();
-      // Pequeña reproducción/pausa imperceptible en el click para desbloquear el canal de audio de iOS
+      if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
+        audioCtxRef.current.resume().catch(() => {});
+      }
+      // Pequeña reproducción/pausa en el click para desbloquear el canal de audio de iOS
       audio.play().then(() => {
         audio.pause();
         audio.currentTime = 0;
@@ -216,36 +338,6 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     }, 1000);
   }
 
-  function reproducirSalidaConClip(elegidoClip?: ClipGate) {
-    setError(null);
-    iniciadoRef.current = false;
-    try {
-      const elegido = elegidoClip || clip || elegirClipAleatorio();
-      setClip(elegido);
-      setElapsedMs(0);
-      setEstado('reproduciendo');
-
-      const audio = audioRef.current;
-      if (!audio) return;
-      audio.src = elegido.url;
-      asegurarGananciaAudio();
-      audioCtxRef.current?.resume();
-      audio
-        .play()
-        .then(() => {
-          const duracionMs = Number.isFinite(audio.duration) ? audio.duration * 1000 : 0;
-          const esperaMs = Math.max(0, duracionMs - ANTICIPO_MS);
-          anticipoRef.current = window.setTimeout(iniciarCronometro, esperaMs);
-        })
-        .catch((err) => {
-          setError('No se pudo reproducir el audio: ' + err.message);
-          setEstado('listo');
-        });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
-    }
-  }
-
   function cancelarPrebucleBolsillo() {
     if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
     setEstado('listo');
@@ -256,11 +348,26 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     iniciarCronometro();
   }
 
+  const [telemetriaUltimoSprint, setTelemetriaUltimoSprint] = useState<PuntoTelemetria[]>([]);
+
   function detener() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
     const final = performance.now() - inicioRef.current;
     setElapsedMs(final);
     setEstado('detenido');
+    setTelemetriaUltimoSprint([...telemetriaRef.current]);
+
+    // Volcado asíncrono a IndexedDB para el Logger Crudo (Paso 0)
+    const runCrudo: RunCrudo = {
+      id: `run_${Date.now()}`,
+      corredorId: sesion.corredorId,
+      distanciaMetros: sesion.distanciaMetros,
+      fecha: Date.now(),
+      muestras: [...muestrasCrudasRef.current],
+      gps: [...gpsCrudoRef.current]
+    };
+    setUltimoRunCrudo(runCrudo);
+    guardarRunCrudo(runCrudo);
 
     // 1. Tono rítmico de 3 segundos de confirmación en el bolsillo (Especialmente para iPhone / iOS Safari)
     try {
@@ -302,12 +409,14 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
         corredorId: sesion.corredorId,
         numero: intentosSesion.length + 1,
         audioId: clip.id,
-        tiempoTotalMs: elapsedMs
+        tiempoTotalMs: elapsedMs,
+        telemetria: telemetriaRef.current.length > 0 ? [...telemetriaRef.current] : undefined
       });
       setIntentosSesion((prev) => [...prev, intento]);
       setEstado('listo');
       setClip(null);
       setElapsedMs(0);
+      telemetriaRef.current = [];
     } finally {
       setGuardando(false);
     }
@@ -317,6 +426,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     setEstado('listo');
     setClip(null);
     setElapsedMs(0);
+    telemetriaRef.current = [];
   }
 
   async function handleBorrarIntentoGuardado(intentoId: string) {
@@ -356,6 +466,18 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
         <span className="font-heading text-7xl font-bold tabular-nums text-primary">
           {formatearTiempo(elapsedMs)}
         </span>
+        {estado === 'detenido' && telemetriaUltimoSprint.length > 0 && (
+          (() => {
+            const vMs = Math.max(0, ...telemetriaUltimoSprint.map((p) => p.v ?? 0));
+            return vMs > 0 ? (
+              <div className="mt-1 flex justify-center">
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-3 py-1 text-xs font-extrabold text-violet-400">
+                  ⚡ Vel. Punta: {(vMs * 3.6).toFixed(1)} km/h
+                </span>
+              </div>
+            ) : null;
+          })()
+        )}
         <p className="mt-2 text-sm text-muted-foreground">
           {estado === 'listo' && (esModoSolo ? '📱 Modo Solo (Bolsillo)' : 'Listo para arrancar')}
           {estado === 'preparando_bolsillo' && '⌛ Guardando celular...'}
@@ -425,6 +547,30 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
             </div>
           )}
 
+          {telemetriaUltimoSprint.length > 0 && (
+            <button
+              onClick={() =>
+                setGraficaModal({
+                  telemetria: [...telemetriaUltimoSprint],
+                  tiempoMs: elapsedMs,
+                  numero: intentosSesion.length + 1
+                })
+              }
+              className="w-full cursor-pointer rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 px-4 text-xs font-extrabold text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shadow-xs"
+            >
+              📊 Ver gráfica de telemetría de este sprint
+            </button>
+          )}
+
+          {ultimoRunCrudo && (
+            <button
+              onClick={() => exportarRunCSV(ultimoRunCrudo)}
+              className="w-full cursor-pointer rounded-xl border border-sky-500/30 bg-sky-500/10 py-2.5 px-4 text-xs font-extrabold text-sky-400 hover:bg-sky-500 hover:text-white transition-all shadow-xs"
+            >
+              📥 Exportar Telemetría Cruda (CSV)
+            </button>
+          )}
+
           <div className="flex gap-3">
             {esTiempoDudoso ? (
               <>
@@ -469,13 +615,38 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
             Intentos guardados en esta sesión
           </h2>
           <ul className="divide-y divide-border rounded-xl border border-border bg-white">
-            {intentosSesion.map((i) => (
-              <li key={i.id} className="flex items-center justify-between px-4 py-2 text-sm">
-                <span className="text-muted-foreground">#{i.numero}</span>
-                <div className="flex items-center gap-3">
-                  <span className="font-heading font-semibold tabular-nums text-primary">
-                    {formatearTiempo(i.tiempoTotalMs)}
-                  </span>
+            {intentosSesion.map((i) => {
+              const vMs = Math.max(0, ...(i.telemetria?.map((p) => p.v ?? 0) ?? []));
+              const vKmh = (vMs * 3.6).toFixed(1);
+              return (
+                <li key={i.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
+                  <span className="text-muted-foreground font-semibold">#{i.numero}</span>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <span className="font-heading font-semibold tabular-nums text-primary block">
+                        {formatearTiempo(i.tiempoTotalMs)}
+                      </span>
+                      {vMs > 0 && (
+                        <span className="text-[10px] font-bold text-violet-500 block -mt-1">
+                          ⚡ {vKmh} km/h
+                        </span>
+                      )}
+                    </div>
+                    {i.telemetria && i.telemetria.length > 0 && (
+                      <button
+                        onClick={() =>
+                          setGraficaModal({
+                            telemetria: i.telemetria!,
+                            tiempoMs: i.tiempoTotalMs,
+                            numero: i.numero
+                          })
+                        }
+                        title="Ver gráfica de telemetría"
+                        className="cursor-pointer text-xs font-bold text-primary hover:underline"
+                      >
+                        📊 Gráfica
+                      </button>
+                    )}
                   <button
                     onClick={() => handleBorrarIntentoGuardado(i.id)}
                     title="Eliminar este intento de la sesión"
@@ -485,7 +656,8 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
                   </button>
                 </div>
               </li>
-            ))}
+            );
+          })}
           </ul>
         </div>
       )}
@@ -493,6 +665,16 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       <button onClick={() => onFinalizarSesion(intentosSesion)} className="btn-secondary w-full">
         Finalizar sesión
       </button>
+
+      {/* Modal de Gráfica de Telemetría */}
+      {graficaModal && (
+        <GraficaSprint
+          telemetria={graficaModal.telemetria}
+          tiempoTotalMs={graficaModal.tiempoMs}
+          numeroIntento={graficaModal.numero}
+          onCerrar={() => setGraficaModal(null)}
+        />
+      )}
     </div>
   );
 }
