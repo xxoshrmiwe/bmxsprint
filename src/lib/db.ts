@@ -117,6 +117,25 @@ function mapIntento(i: any): Intento {
   };
 }
 
+export async function eliminarIntento(intentoId: string): Promise<void> {
+  const { error } = await supabase
+    .from('intentos')
+    .delete()
+    .eq('id', intentoId);
+
+  if (error) throw error;
+}
+
+export async function eliminarSesion(sesionId: string): Promise<void> {
+  const { error } = await supabase
+    .from('sesiones')
+    .delete()
+    .eq('id', sesionId);
+
+  if (error) throw error;
+}
+
+
 export async function obtenerMeta(corredorId: string): Promise<Meta | null> {
   const { data, error } = await supabase
     .from('metas')
