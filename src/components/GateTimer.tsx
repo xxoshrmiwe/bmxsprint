@@ -172,7 +172,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   async function iniciarPrebucleBolsillo() {
     setError(null);
 
-    // SOLICITUD DIRECTA DE PERMISO SINCRO CON EL CLICK DEL USUARIO EN iOS (iPhone 15)
+    // 1. SOLICITUD DIRECTA DE PERMISO SINCRO CON EL CLICK DEL USUARIO EN iOS (iPhone)
     if (typeof (DeviceMotionEvent as any)?.requestPermission === 'function') {
       try {
         const respuesta = await (DeviceMotionEvent as any).requestPermission();
@@ -185,6 +185,22 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       }
     }
 
+    // 2. DESBLOQUEO OBLIGATORIO DE AUDIO EN iOS SAFARI (Al toque directo del usuario)
+    const audio = audioRef.current;
+    const elegido = elegirClipAleatorio();
+    setClip(elegido);
+    if (audio) {
+      audio.src = elegido.url;
+      audio.load();
+      asegurarGananciaAudio();
+      audioCtxRef.current?.resume();
+      // Pequeña reproducción/pausa imperceptible en el click para desbloquear el canal de audio de iOS
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+      }).catch(() => {});
+    }
+
     setEstado('preparando_bolsillo');
     setConteoBolsillo(10);
     let faltan = 10;
@@ -195,9 +211,39 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       setConteoBolsillo(faltan);
       if (faltan <= 0) {
         if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
-        reproducirSalida();
+        reproducirSalidaConClip(elegido);
       }
     }, 1000);
+  }
+
+  function reproducirSalidaConClip(elegidoClip?: ClipGate) {
+    setError(null);
+    iniciadoRef.current = false;
+    try {
+      const elegido = elegidoClip || clip || elegirClipAleatorio();
+      setClip(elegido);
+      setElapsedMs(0);
+      setEstado('reproduciendo');
+
+      const audio = audioRef.current;
+      if (!audio) return;
+      audio.src = elegido.url;
+      asegurarGananciaAudio();
+      audioCtxRef.current?.resume();
+      audio
+        .play()
+        .then(() => {
+          const duracionMs = Number.isFinite(audio.duration) ? audio.duration * 1000 : 0;
+          const esperaMs = Math.max(0, duracionMs - ANTICIPO_MS);
+          anticipoRef.current = window.setTimeout(iniciarCronometro, esperaMs);
+        })
+        .catch((err) => {
+          setError('No se pudo reproducir el audio: ' + err.message);
+          setEstado('listo');
+        });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : String(err));
+    }
   }
 
   function cancelarPrebucleBolsillo() {
@@ -216,24 +262,29 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     setElapsedMs(final);
     setEstado('detenido');
 
-    // 1. Sonido Beep metálico de confirmación en el bolsillo (Especialmente para iPhone 15)
+    // 1. Tono rítmico de 3 segundos de confirmación en el bolsillo (Especialmente para iPhone / iOS Safari)
     try {
       const AudioCtxCtor = window.AudioContext ?? (window as any).webkitAudioContext;
       const ctx = audioCtxRef.current || new AudioCtxCtor();
       if (ctx.state === 'suspended') ctx.resume();
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, ctx.currentTime);
-      gain.gain.setValueAtTime(0.5, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.start();
-      osc.stop(ctx.currentTime + 0.35);
+
+      const ahora = ctx.currentTime;
+      // 3 ráfagas metálicas de 0.8s con 0.2s de descanso = 3.0 segundos totales
+      [0, 1.0, 2.0].forEach((offset) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, ahora + offset);
+        gain.gain.setValueAtTime(0.6, ahora + offset);
+        gain.gain.exponentialRampToValueAtTime(0.001, ahora + offset + 0.8);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(ahora + offset);
+        osc.stop(ahora + offset + 0.8);
+      });
     } catch (_) {}
 
-    // 2. Vibración de 3 segundos en el bolsillo (Android)
+    // 2. Vibración de 3 segundos continuos en el bolsillo (Android)
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([1000, 200, 1000, 200, 1000]);
