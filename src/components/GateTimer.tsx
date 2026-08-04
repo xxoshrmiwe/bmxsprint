@@ -233,10 +233,10 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       osc.stop(ctx.currentTime + 0.35);
     } catch (_) {}
 
-    // 2. Vibración en el bolsillo (Android)
+    // 2. Vibración de 3 segundos en el bolsillo (Android)
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
-        navigator.vibrate([300, 100, 300]);
+        navigator.vibrate([1000, 200, 1000, 200, 1000]);
       } catch (_) {}
     }
   }
