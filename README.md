@@ -1,11 +1,13 @@
 # GATERIGHT BMX
 
-Cronómetro de gate para entrenamientos de BMX Racing: registra corredores, arranca un nuevo entrenamiento indicando la distancia del sprint, hace (o salta) un calentamiento, reproduce un audio de salida al azar y mide el tiempo desde el "gate drop" hasta que detienes manualmente.
+Cronómetro de gate para entrenamientos de BMX Racing: registra corredores, arranca un nuevo entrenamiento indicando la distancia del sprint, modo de medición (Asistido o Solo Bolsillo con Acelerómetro), realiza (o salta) un calentamiento, reproduce un audio de salida al azar y mide el tiempo desde el "gate drop" hasta que detienes manualmente o al frenar tras la meta.
 
 ## Stack
 
 - **Astro** (`output: 'static'`) — el sitio se genera como HTML/JS estático. La app de los corredores habla directo con Supabase desde el navegador; el panel de admin usa un puñado de funciones serverless de Vercel (`api/admin/*`) para las operaciones que requieren privilegios elevados.
 - **React** — un solo island (`src/components/SprintApp.tsx`) monta toda la app con `client:only="react"`.
+- **PWA Standalone & Service Worker** — aplicación web progresiva instalable nativamente en Android e iOS sin barras del navegador, respaldada por `manifest.webmanifest` y `public/sw.js`.
+- **Modo Solo con Acelerómetro 3D** — detección de frenado por sensores de movimiento (`devicemotion`) calibrados para iPhone 15 (fuerza dinámica pura) y Android (fuerza con gravedad), con confirmación de 3 segundos (vibración en Android y señal auditiva rítmica en iOS).
 - **Tailwind CSS v4** — vía `@tailwindcss/vite`.
 - **Supabase** (Auth + Postgres) — reemplaza lo que antes era IndexedDB local. Cada corredor es una cuenta real (correo + contraseña) que funciona desde cualquier dispositivo, con:
   - Correo de bienvenida al registrarse (plantilla "Confirm signup" de Supabase Auth).
@@ -38,6 +40,26 @@ En **Authentication → Email Templates** de Supabase están las plantillas que 
 Podés editar el asunto y el HTML de cada una para que suene más a "GATERIGHT BMX" en vez del texto genérico de Supabase.
 
 > **Límite del plan gratis:** Supabase usa un SMTP propio para el plan gratuito con un límite bajo de correos por hora (pensado para pruebas). Para uso real con varias familias, conviene configurar un SMTP propio (ej. Resend, gratis hasta 3,000 correos/mes) en **Settings → Auth → SMTP Settings**.
+
+## PWA e Instalación en Dispositivos Móviles
+
+La app incluye soporte nativo PWA:
+- **`public/manifest.webmanifest`**: Configurado con `display: "standalone"`, `scope: "/"`, iconos `192x192`, `512x512` y `maskable`.
+- **`public/sw.js`**: Service Worker para precarga y ejecución fuera de línea.
+- **`<InstallPrompt />`**: Componente de instalación reutilizable con contexto `InstallPwaProvider`:
+  - **En Android:** Dispara el diálogo nativo de instalación usando `beforeinstallprompt`.
+  - **En iOS:** Modal accesible con instrucciones paso a paso para Safari (`Compartir → Agregar a inicio`).
+  - **Regla de 14 días:** Guarda en `localStorage` la decisión del usuario para no mostrar el aviso nuevamente por 14 días si es descartado.
+
+## Modo Solo (Bolsillo) con Acelerómetro
+
+Diseñado para entrenamientos autónomos sin necesidad de un tercero en la meta:
+1. Eliges **"📱 Solo (Bolsillo)"** al crear la sesión.
+2. Presionas **"📱 Guardar en bolsillo e Iniciar (10s)"**, lo que desbloquea el canal de audio en iOS Safari y solicita permisos del acelerómetro.
+3. Dispones de **10 segundos de cuenta regresiva** para guardar el teléfono en el jersey o pantalón y acomodarte en el partidor.
+4. Suena la salida oficial y corres el sprint.
+5. Al cruzar la meta y frenar de golpe, el acelerómetro congela automáticamente el cronómetro.
+6. El celular emite una **confirmación de 3 segundos** (3s de vibración rítmica en Android y 3s de ráfaga sonora metálica en iPhone).
 
 ## Panel de administración (`/bmxadmin`)
 
@@ -91,10 +113,10 @@ Ver [`src/assets/gate/README.md`](src/assets/gate/README.md) para más detalle.
 
 | Comando           | Acción                                        |
 | :---------------- | :--------------------------------------------- |
-| `npm install`      | Instala dependencias                          |
-| `npm run dev`      | Corre el servidor local en `localhost:4321`   |
-| `npm run build`    | Genera el sitio estático en `./dist/`         |
-| `npm run preview`  | Sirve el build de producción localmente        |
+| `pnpm install`    | Instala dependencias                          |
+| `pnpm run dev`    | Corre el servidor local en `localhost:4321`   |
+| `pnpm run build`  | Genera el sitio estático en `./dist/`         |
+| `pnpm run preview`| Sirve el build de producción localmente        |
 
 ## Desplegar en Vercel (gratis)
 
@@ -108,6 +130,12 @@ Ver [`src/assets/gate/README.md`](src/assets/gate/README.md) para más detalle.
 ## Estructura del proyecto
 
 ```text
+public/
+├── manifest.webmanifest   # Manifiesto PWA (standalone, iconos, scope)
+├── sw.js                 # Service Worker para ejecución PWA
+├── icon-192.png          # Icono PWA 192x192
+├── icon-512.png          # Icono PWA 512x512
+└── icon-maskable-512.png # Icono PWA Maskable 512x512
 api/
 ├── _lib/
 │   ├── supabaseAdmin.ts   # Cliente de Supabase con la service_role key (solo servidor)
@@ -118,12 +146,14 @@ api/
 └── feedback.ts        # POST: manda por correo (Resend) lo que se escribe en el bombillo flotante
 src/
 ├── assets/gate/       # Audios de salida (.mp3/.wav/.ogg/.m4a) — los subes tú
-├── components/        # Componentes React (registro, login, recuperar contraseña, sesión, gate timer, historial, export/import, admin, bombillo de ideas)
-├── layouts/           # Layout de Astro (importa Tailwind)
+├── components/        # Componentes React (InstallPrompt, Registro, Login, GateTimer, Historial, Admin, Bombillo)
+├── context/
+│   └── InstallPwaContext.tsx # Proveedor de contexto PWA (beforeinstallprompt, descarte 14 días, iOS)
+├── layouts/           # Layout de Astro (PWA metas, safe area, Tailwind)
 ├── lib/
 │   ├── audio.ts       # Detecta y elige al azar un audio de gate
 │   ├── supabase.ts    # Cliente de Supabase (usa las env vars PUBLIC_SUPABASE_*)
-│   ├── cuenta.ts       # Registro, login, logout, recuperar/actualizar contraseña (Supabase Auth)
+│   ├── cuenta.ts      # Registro, login, logout, recuperar/actualizar contraseña (Supabase Auth)
 │   ├── db.ts          # Sesiones e intentos (consultas a Supabase Postgres)
 │   ├── adminApi.ts    # Cliente del front para /api/admin/*
 │   ├── warmup.ts      # Rutinas de calentamiento por edad (ver NOTICE-ejercicios.md)
@@ -138,6 +168,6 @@ supabase/
 
 ## Aviso sobre los datos
 
-Los corredores, sesiones e intentos viven en tu proyecto de Supabase (Postgres), no en el navegador — por eso funcionan desde cualquier dispositivo iniciando sesión con el mismo correo. La cuenta se protege con la autenticación real de Supabase (no es un hash local como en versiones anteriores de este proyecto).
+Los corredores, sesiones e intentos viven en tu proyecto de Supabase (Postgres), no en el navegador — por eso funcionan desde cualquier dispositivo iniciando sesión con el mismo correo. La cuenta se protege con la autenticación real de Supabase.
 
-**Sobre eliminar una cuenta:** por ahora no hay botón para borrar completamente una cuenta desde la app (eso requiere la API de administración de Supabase, que usa una clave que nunca debe exponerse en el navegador). Si un corredor quiere borrar su cuenta, se hace manualmente desde el dashboard de Supabase (**Authentication → Users**).
+**Sobre eliminar una cuenta:** si un corredor quiere borrar su cuenta, se hace manualmente desde el dashboard de Supabase (**Authentication → Users**).
