@@ -5,13 +5,6 @@ import { obtenerClienteAdmin } from '../_lib/supabaseAdmin.js';
 const REMITENTE_DEFAULT = 'GATERIGHT BMX <onboarding@resend.dev>';
 const MAX_LARGO_HTML = 50000;
 
-interface ResendPayload {
-  from: string;
-  to: string[];
-  subject: string;
-  html: string;
-}
-
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Método no permitido' });
@@ -48,7 +41,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const apiKey = process.env.RESEND_API_KEY;
   if (!apiKey) {
-    res.status(500).json({ error: 'No se ha configurado la variable de entorno RESEND_API_KEY en el servidor.' });
+    res.status(500).json({ error: 'Falta configurar la variable de entorno RESEND_API_KEY en Vercel.' });
     return;
   }
 
@@ -83,41 +76,77 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     let totalEnviados = 0;
     let totalErrores = 0;
+    let ultimoErrorResend = '';
 
-    // Enviar individualmente o en lotes de Resend (máximo 100 por lote en /emails/batch)
-    const TAMANO_LOTE = 100;
-    for (let i = 0; i < destinatarios.length; i += TAMANO_LOTE) {
-      const loteEmails = destinatarios.slice(i, i + TAMANO_LOTE);
-
-      const batchPayload: ResendPayload[] = loteEmails.map((dest) => ({
-        from: REMITENTE_DEFAULT,
-        to: [dest],
-        subject: asunto.trim(),
-        html
-      }));
-
-      const respuesta = await fetch('https://api.resend.com/emails/batch', {
+    if (destinatarios.length === 1) {
+      // Envío individual a través del endpoint estándar de Resend
+      const respuesta = await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
           Authorization: `Bearer ${apiKey}`,
           'Content-Type': 'application/json'
         },
-        body: JSON.stringify(batchPayload)
+        body: JSON.stringify({
+          from: REMITENTE_DEFAULT,
+          to: [destinatarios[0]],
+          subject: asunto.trim(),
+          html
+        })
       });
 
       if (respuesta.ok) {
-        totalEnviados += loteEmails.length;
+        totalEnviados = 1;
       } else {
+        totalErrores = 1;
         const errorText = await respuesta.text();
-        console.error(`Error enviando lote de correos (${i} - ${i + loteEmails.length}):`, errorText);
-        totalErrores += loteEmails.length;
+        try {
+          const jsonErr = JSON.parse(errorText);
+          ultimoErrorResend = jsonErr.message || jsonErr.error || errorText;
+        } catch {
+          ultimoErrorResend = errorText;
+        }
+      }
+    } else {
+      // Envío por lotes de 100 correos mediante /emails/batch
+      const TAMANO_LOTE = 100;
+      for (let i = 0; i < destinatarios.length; i += TAMANO_LOTE) {
+        const loteEmails = destinatarios.slice(i, i + TAMANO_LOTE);
+
+        const batchPayload = loteEmails.map((dest) => ({
+          from: REMITENTE_DEFAULT,
+          to: [dest],
+          subject: asunto.trim(),
+          html
+        }));
+
+        const respuesta = await fetch('https://api.resend.com/emails/batch', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            'Content-Type': 'application/json'
+          },
+          body: JSON.stringify(batchPayload)
+        });
+
+        if (respuesta.ok) {
+          totalEnviados += loteEmails.length;
+        } else {
+          totalErrores += loteEmails.length;
+          const errorText = await respuesta.text();
+          try {
+            const jsonErr = JSON.parse(errorText);
+            ultimoErrorResend = jsonErr.message || jsonErr.error || errorText;
+          } catch {
+            ultimoErrorResend = errorText;
+          }
+        }
       }
     }
 
     if (totalEnviados === 0 && totalErrores > 0) {
-      res.status(500).json({
+      res.status(400).json({
         ok: false,
-        error: 'No se pudo enviar ningún correo. Verifica tus credenciales y limites de Resend.'
+        error: `Resend rechazó el envío: ${ultimoErrorResend || 'Verifica la API key y límites de Resend.'}`
       });
       return;
     }
