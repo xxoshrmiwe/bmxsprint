@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import type { Sesion, Intento } from '../lib/types';
 import { elegirClipAleatorio, type ClipGate } from '../lib/audio';
-import { crearIntento } from '../lib/db';
+import { crearIntento, eliminarIntento } from '../lib/db';
 import { formatearTiempo } from '../lib/tiempo';
-import { IconoAlerta } from './Icono';
+import { IconoAlerta, IconoBasura } from './Icono';
 
 interface Props {
   sesion: Sesion;
@@ -15,6 +15,9 @@ type Estado = 'listo' | 'reproduciendo' | 'corriendo' | 'detenido';
 // El cronómetro arranca este tanto antes de que el audio termine de sonar,
 // para compensar la cola de silencio/reverb que queda después del "drop" real.
 const ANTICIPO_MS = 2000;
+
+// Umbral en milisegundos por debajo del cual se considera una prueba o salida en falso
+const UMBRAL_TIEMPO_DUDOSO_MS = 2500;
 
 // Los audios del partidor suenan bajito (~-11 dB de pico), así que se
 // amplifican un 30% extra vía Web Audio API (el .volume del <audio> no
@@ -56,8 +59,6 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     };
   }, []);
 
-  // Conecta el <audio> a un GainNode una sola vez (createMediaElementSource
-  // no se puede llamar dos veces sobre el mismo elemento).
   function asegurarGananciaAudio() {
     const audio = audioRef.current;
     if (!audio || gainNodeRef.current) return;
@@ -155,6 +156,18 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     setElapsedMs(0);
   }
 
+  async function handleBorrarIntentoGuardado(intentoId: string) {
+    try {
+      await eliminarIntento(intentoId);
+      setIntentosSesion((prev) => prev.filter((i) => i.id !== intentoId));
+    } catch (err) {
+      alert('No se pudo eliminar el intento');
+      console.error(err);
+    }
+  }
+
+  const esTiempoDudoso = elapsedMs > 0 && elapsedMs < UMBRAL_TIEMPO_DUDOSO_MS;
+
   return (
     <div className="mx-auto max-w-md space-y-6 p-4 text-center">
       <div className="text-left">
@@ -184,7 +197,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
           {estado === 'listo' && 'Listo para arrancar'}
           {estado === 'reproduciendo' && 'Reproduciendo salida...'}
           {estado === 'corriendo' && '¡Corriendo!'}
-          {estado === 'detenido' && 'Detenido'}
+          {estado === 'detenido' && (esTiempoDudoso ? '⚠️ ¿Prueba o salida en falso?' : 'Detenido')}
         </p>
       </div>
 
@@ -210,35 +223,76 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       )}
 
       {estado === 'detenido' && (
-        <div className="flex gap-3">
-          <button
-            onClick={guardarYRepetir}
-            disabled={guardando}
-            className="flex-1 cursor-pointer rounded-lg bg-accent px-4 py-3 font-semibold text-accent-foreground shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {guardando ? 'Guardando...' : 'Guardar y repetir'}
-          </button>
-          <button
-            onClick={descartarYRepetir}
-            className="cursor-pointer rounded-lg border border-border bg-white px-4 py-3 font-semibold text-muted-foreground transition-colors duration-200 hover:bg-surface"
-          >
-            Descartar
-          </button>
+        <div className="space-y-3">
+          {esTiempoDudoso && (
+            <div className="flex items-start gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-left text-xs text-amber-500">
+              <IconoAlerta className="mt-0.5 h-4 w-4 shrink-0" />
+              <span>
+                <strong>¿Prueba o toque accidental? ({formatearTiempo(elapsedMs)})</strong><br />
+                Este tiempo es inusualmente corto para un sprint real de {sesion.distanciaMetros}m. Te sugerimos descartarlo para mantener tus estadísticas limpias.
+              </span>
+            </div>
+          )}
+
+          <div className="flex gap-3">
+            {esTiempoDudoso ? (
+              <>
+                <button
+                  onClick={descartarYRepetir}
+                  className="flex-1 cursor-pointer rounded-lg bg-warning px-4 py-3 font-bold text-warning-foreground shadow-md transition-all hover:opacity-95"
+                >
+                  Descartar y Repetir
+                </button>
+                <button
+                  onClick={guardarYRepetir}
+                  disabled={guardando}
+                  className="cursor-pointer rounded-lg border border-border bg-white px-4 py-3 font-semibold text-muted-foreground transition-colors hover:bg-surface text-xs"
+                >
+                  Guardar de todos modos
+                </button>
+              </>
+            ) : (
+              <>
+                <button
+                  onClick={guardarYRepetir}
+                  disabled={guardando}
+                  className="flex-1 cursor-pointer rounded-lg bg-accent px-4 py-3 font-semibold text-accent-foreground shadow-md transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg active:translate-y-0 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {guardando ? 'Guardando...' : 'Guardar y repetir'}
+                </button>
+                <button
+                  onClick={descartarYRepetir}
+                  className="cursor-pointer rounded-lg border border-border bg-white px-4 py-3 font-semibold text-muted-foreground transition-colors duration-200 hover:bg-surface"
+                >
+                  Descartar
+                </button>
+              </>
+            )}
+          </div>
         </div>
       )}
 
       {intentosSesion.length > 0 && (
         <div className="text-left">
           <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            Intentos guardados
+            Intentos guardados en esta sesión
           </h2>
           <ul className="divide-y divide-border rounded-xl border border-border bg-white">
             {intentosSesion.map((i) => (
-              <li key={i.id} className="flex justify-between px-4 py-2">
+              <li key={i.id} className="flex items-center justify-between px-4 py-2 text-sm">
                 <span className="text-muted-foreground">#{i.numero}</span>
-                <span className="font-heading font-semibold tabular-nums text-primary">
-                  {formatearTiempo(i.tiempoTotalMs)}
-                </span>
+                <div className="flex items-center gap-3">
+                  <span className="font-heading font-semibold tabular-nums text-primary">
+                    {formatearTiempo(i.tiempoTotalMs)}
+                  </span>
+                  <button
+                    onClick={() => handleBorrarIntentoGuardado(i.id)}
+                    title="Eliminar este intento de la sesión"
+                    className="cursor-pointer text-muted-foreground hover:text-destructive"
+                  >
+                    <IconoBasura className="h-4 w-4" />
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -251,3 +305,4 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     </div>
   );
 }
+
