@@ -196,7 +196,7 @@ export default function SprintApp() {
 
   return (
     <InstallPwaProvider>
-      <div className="min-h-screen">
+      <div className="w-full">
         {esImpersonado && <BarraModoAdmin nombreCorredor={nombreCorredorActual} />}
         {renderContenido()}
       </div>
