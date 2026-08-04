@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import type { Corredor, Sesion } from '../lib/types';
-import { obtenerCorredorActual } from '../lib/cuenta';
+import { obtenerCorredorActual, cerrarSesion } from '../lib/cuenta';
 import { useMantenerPantallaActiva } from '../lib/pantalla';
 import Landing from './Landing';
 import Acceso from './Acceso';
@@ -29,12 +29,41 @@ type Vista =
   | { tipo: 'historial'; corredor: Corredor }
   | { tipo: 'exportar-importar'; corredor: Corredor };
 
+function BarraModoAdmin({ nombreCorredor }: { nombreCorredor?: string }) {
+  async function handleVolverAdmin() {
+    localStorage.removeItem('admin_impersonating');
+    await cerrarSesion();
+    window.location.href = '/bmxadmin';
+  }
+
+  return (
+    <div className="sticky top-0 z-50 flex flex-wrap items-center justify-between gap-2 border-b border-amber-600/40 bg-amber-500 px-4 py-2.5 text-xs font-bold text-slate-950 shadow-md">
+      <div className="flex items-center gap-2">
+        <span className="text-base">👁️</span>
+        <span>
+          Modo Administrador — Viendo app como: <strong>{nombreCorredor || 'Corredor'}</strong>
+        </span>
+      </div>
+      <button
+        onClick={handleVolverAdmin}
+        className="cursor-pointer rounded-md bg-slate-950 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-slate-800 active:scale-95"
+      >
+        ← Volver al Panel Admin (/bmxadmin)
+      </button>
+    </div>
+  );
+}
+
 export default function SprintApp() {
   const [vista, setVista] = useState<Vista>({ tipo: 'cargando' });
+  const [esImpersonado, setEsImpersonado] = useState(false);
 
   useMantenerPantallaActiva(vista.tipo === 'calentamiento' || vista.tipo === 'gate');
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setEsImpersonado(localStorage.getItem('admin_impersonating') === 'true');
+    }
     obtenerCorredorActual().then((corredor) => {
       setVista(corredor ? { tipo: 'panel', corredor } : { tipo: 'landing' });
     });
@@ -45,117 +74,128 @@ export default function SprintApp() {
     setVista(corredor ? { tipo: 'panel', corredor } : { tipo: 'acceso' });
   }
 
-  switch (vista.tipo) {
-    case 'cargando':
-      return <p className="p-6 text-center text-slate-400">Cargando...</p>;
+  const nombreCorredorActual = 'corredor' in vista ? vista.corredor.nombre : undefined;
 
-    case 'landing':
-      return <Landing onIniciar={() => setVista({ tipo: 'acceso' })} />;
+  function renderContenido() {
+    switch (vista.tipo) {
+      case 'cargando':
+        return <p className="p-6 text-center text-slate-400">Cargando...</p>;
 
-    case 'acceso':
-      return (
-        <Acceso
-          onExistente={() => setVista({ tipo: 'login' })}
-          onNuevo={() => setVista({ tipo: 'registro' })}
-        />
-      );
+      case 'landing':
+        return <Landing onIniciar={() => setVista({ tipo: 'acceso' })} />;
 
-    case 'login':
-      return (
-        <IniciarSesion
-          onAcceso={irAlPanel}
-          onVolver={() => setVista({ tipo: 'acceso' })}
-          onIrARegistro={() => setVista({ tipo: 'registro' })}
-          onOlvideContrasena={() => setVista({ tipo: 'olvide-password' })}
-        />
-      );
+      case 'acceso':
+        return (
+          <Acceso
+            onExistente={() => setVista({ tipo: 'login' })}
+            onNuevo={() => setVista({ tipo: 'registro' })}
+          />
+        );
 
-    case 'registro':
-      return (
-        <Registro
-          onRegistrado={({ sesionActiva, email }) => {
-            if (sesionActiva) {
-              irAlPanel();
-            } else {
-              setVista({ tipo: 'registro-exitoso', email });
+      case 'login':
+        return (
+          <IniciarSesion
+            onAcceso={irAlPanel}
+            onVolver={() => setVista({ tipo: 'acceso' })}
+            onIrARegistro={() => setVista({ tipo: 'registro' })}
+            onOlvideContrasena={() => setVista({ tipo: 'olvide-password' })}
+          />
+        );
+
+      case 'registro':
+        return (
+          <Registro
+            onRegistrado={({ sesionActiva, email }) => {
+              if (sesionActiva) {
+                irAlPanel();
+              } else {
+                setVista({ tipo: 'registro-exitoso', email });
+              }
+            }}
+            onVolver={() => setVista({ tipo: 'acceso' })}
+            onIrALogin={() => setVista({ tipo: 'login' })}
+          />
+        );
+
+      case 'registro-exitoso':
+        return (
+          <div className="mx-auto max-w-md space-y-4 p-6 text-center">
+            <h1 className="text-xl font-bold text-slate-900">¡Ya casi!</h1>
+            <p className="text-slate-500">
+              Te mandamos un correo de bienvenida a <strong>{vista.email}</strong> para confirmar tu cuenta. Ábrelo
+              y confirma para poder iniciar sesión.
+            </p>
+            <button
+              onClick={() => setVista({ tipo: 'login' })}
+              className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700"
+            >
+              Ir a iniciar sesión
+            </button>
+          </div>
+        );
+
+      case 'olvide-password':
+        return <OlvideContrasena onVolver={() => setVista({ tipo: 'login' })} />;
+
+      case 'panel':
+        return (
+          <PanelCorredor
+            corredor={vista.corredor}
+            onNuevaSesion={() => setVista({ tipo: 'nueva-sesion', corredor: vista.corredor })}
+            onHistorial={() => setVista({ tipo: 'historial', corredor: vista.corredor })}
+            onExportarImportar={() => setVista({ tipo: 'exportar-importar', corredor: vista.corredor })}
+            onCerrarSesion={() => setVista({ tipo: 'acceso' })}
+          />
+        );
+
+      case 'nueva-sesion':
+        return (
+          <NuevaSesion
+            corredor={vista.corredor}
+            onVolver={() => setVista({ tipo: 'panel', corredor: vista.corredor })}
+            onSesionCreada={(sesion) =>
+              setVista(
+                sesion.calentamientoRealizado
+                  ? { tipo: 'calentamiento', corredor: vista.corredor, sesion }
+                  : { tipo: 'gate', corredor: vista.corredor, sesion }
+              )
             }
-          }}
-          onVolver={() => setVista({ tipo: 'acceso' })}
-          onIrALogin={() => setVista({ tipo: 'login' })}
-        />
-      );
+          />
+        );
 
-    case 'registro-exitoso':
-      return (
-        <div className="mx-auto max-w-md space-y-4 p-6 text-center">
-          <h1 className="text-xl font-bold text-slate-900">¡Ya casi!</h1>
-          <p className="text-slate-500">
-            Te mandamos un correo de bienvenida a <strong>{vista.email}</strong> para confirmar tu cuenta. Ábrelo
-            y confirma para poder iniciar sesión.
-          </p>
-          <button
-            onClick={() => setVista({ tipo: 'login' })}
-            className="w-full rounded-md bg-slate-900 px-4 py-2 font-medium text-white hover:bg-slate-700"
-          >
-            Ir a iniciar sesión
-          </button>
-        </div>
-      );
+      case 'calentamiento':
+        return (
+          <Calentamiento
+            edad={vista.corredor.edad}
+            onListo={() => setVista({ tipo: 'gate', corredor: vista.corredor, sesion: vista.sesion })}
+          />
+        );
 
-    case 'olvide-password':
-      return <OlvideContrasena onVolver={() => setVista({ tipo: 'login' })} />;
+      case 'gate':
+        return (
+          <GateTimer
+            sesion={vista.sesion}
+            onFinalizarSesion={() => setVista({ tipo: 'historial', corredor: vista.corredor })}
+          />
+        );
 
-    case 'panel':
-      return (
-        <PanelCorredor
-          corredor={vista.corredor}
-          onNuevaSesion={() => setVista({ tipo: 'nueva-sesion', corredor: vista.corredor })}
-          onHistorial={() => setVista({ tipo: 'historial', corredor: vista.corredor })}
-          onExportarImportar={() => setVista({ tipo: 'exportar-importar', corredor: vista.corredor })}
-          onCerrarSesion={() => setVista({ tipo: 'acceso' })}
-        />
-      );
+      case 'historial':
+        return <Historial corredor={vista.corredor} onVolver={() => setVista({ tipo: 'panel', corredor: vista.corredor })} />;
 
-    case 'nueva-sesion':
-      return (
-        <NuevaSesion
-          corredor={vista.corredor}
-          onVolver={() => setVista({ tipo: 'panel', corredor: vista.corredor })}
-          onSesionCreada={(sesion) =>
-            setVista(
-              sesion.calentamientoRealizado
-                ? { tipo: 'calentamiento', corredor: vista.corredor, sesion }
-                : { tipo: 'gate', corredor: vista.corredor, sesion }
-            )
-          }
-        />
-      );
-
-    case 'calentamiento':
-      return (
-        <Calentamiento
-          edad={vista.corredor.edad}
-          onListo={() => setVista({ tipo: 'gate', corredor: vista.corredor, sesion: vista.sesion })}
-        />
-      );
-
-    case 'gate':
-      return (
-        <GateTimer
-          sesion={vista.sesion}
-          onFinalizarSesion={() => setVista({ tipo: 'historial', corredor: vista.corredor })}
-        />
-      );
-
-    case 'historial':
-      return <Historial corredor={vista.corredor} onVolver={() => setVista({ tipo: 'panel', corredor: vista.corredor })} />;
-
-    case 'exportar-importar':
-      return (
-        <ExportarImportar
-          corredor={vista.corredor}
-          onVolver={() => setVista({ tipo: 'panel', corredor: vista.corredor })}
-        />
-      );
+      case 'exportar-importar':
+        return (
+          <ExportarImportar
+            corredor={vista.corredor}
+            onVolver={() => setVista({ tipo: 'panel', corredor: vista.corredor })}
+          />
+        );
+    }
   }
+
+  return (
+    <div className="min-h-screen">
+      {esImpersonado && <BarraModoAdmin nombreCorredor={nombreCorredorActual} />}
+      {renderContenido()}
+    </div>
+  );
 }

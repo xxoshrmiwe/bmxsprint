@@ -67,6 +67,7 @@ export default function AdminApp() {
     setEntrando(true);
     try {
       await iniciarSesion(email.trim(), password, recordar);
+      localStorage.setItem('admin_email_guardado', email.trim());
       await cargarDashboard();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'No se pudo iniciar sesión.');
@@ -77,6 +78,7 @@ export default function AdminApp() {
 
   async function handleSalir() {
     await cerrarSesion();
+    localStorage.removeItem('admin_impersonating');
     setDatos(null);
     setVista('login');
   }
@@ -115,6 +117,8 @@ export default function AdminApp() {
   async function handleEntrarComo(usuarioEmail: string) {
     setEstadoEntrar((prev) => ({ ...prev, [usuarioEmail]: 'entrando' }));
     try {
+      localStorage.setItem('admin_impersonating', 'true');
+      if (email) localStorage.setItem('admin_email_guardado', email);
       const link = await generarEnlaceEntrarComo(usuarioEmail);
       window.open(link, '_blank');
       setEstadoEntrar((prev) => {
@@ -129,6 +133,7 @@ export default function AdminApp() {
       setEstadoEntrar((prev) => ({ ...prev, [usuarioEmail]: 'error' }));
     }
   }
+
 
   if (vista === 'cargando') {
     return <p className="p-6 text-center text-muted-foreground">Cargando...</p>;
