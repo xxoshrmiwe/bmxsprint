@@ -51,7 +51,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const sesiones = (sesionesRes.data ?? []) as FilaSesion[];
   const intentos = (intentosRes.data ?? []) as FilaIntento[];
 
-  const emailPorId = new Map(usuariosAuth.data.users.map((u) => [u.id, u.email ?? '']));
+  const emailPorId = new Map<string, string>((usuariosAuth.data?.users ?? []).map((u) => [u.id, u.email ?? '']));
   const sesionesPorCorredor = new Map<string, number>();
   const ultimaSesionPorCorredor = new Map<string, number>();
   for (const s of sesiones) {

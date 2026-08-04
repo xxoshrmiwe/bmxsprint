@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { Corredor, Sesion, Intento, Meta } from '../lib/types';
 import { listarSesionesPorCorredor, listarIntentosPorCorredor, obtenerMeta, guardarMeta } from '../lib/db';
-import { formatearTiempo, formatearRitmo, calcularRitmoMsPor10m } from '../lib/tiempo';
+import { formatearTiempo, formatearRitmo, calcularRitmoMsPor10m, pronosticarTiempoMs } from '../lib/tiempo';
 import { IconoLlama, IconoObjetivo, IconoFlechaArriba, IconoFlechaAbajo, IconoCheck } from './Icono';
 
 interface Props {
@@ -44,6 +44,7 @@ export default function DashboardCorredor({ corredor }: Props) {
   const [intentos, setIntentos] = useState<IntentoConDistancia[]>([]);
   const [distanciasDisponibles, setDistanciasDisponibles] = useState<number[]>([]);
   const [distanciaSeleccionada, setDistanciaSeleccionada] = useState<number | null>(null);
+  const [distanciaPronostico, setDistanciaPronostico] = useState<number>(20);
 
   const [meta, setMeta] = useState<Meta | null>(null);
   const [editandoMeta, setEditandoMeta] = useState(false);
@@ -92,6 +93,7 @@ export default function DashboardCorredor({ corredor }: Props) {
 
       setDistanciasDisponibles(distancias);
       setDistanciaSeleccionada(distancias[0]);
+      setDistanciaPronostico(distancias[0] || 20);
       setCargando(false);
     })();
   }, [corredor.id]);
@@ -131,14 +133,19 @@ export default function DashboardCorredor({ corredor }: Props) {
     };
   }, [intentos, distanciaSeleccionada]);
 
-  // El ritmo (tiempo cada 10m) se normaliza entre TODAS las distancias
-  // entrenadas, para que una sola meta sirva sin importar cuál se corra hoy.
+  // El ritmo de velocidad lanzada (tiempo cada 10m sin el costo fijo de arranque)
+  // se normaliza entre TODAS las distancias entrenadas.
   const ritmoGlobal = useMemo(() => {
     if (intentos.length === 0) return null;
     const ordenados = [...intentos].sort((a, b) => a.creadoEn - b.creadoEn);
     const ritmos = ordenados.map((i) => calcularRitmoMsPor10m(i.tiempoTotalMs, i.distanciaMetros));
     return { mejor: Math.min(...ritmos), primero: ritmos[0] };
   }, [intentos]);
+
+  const tiempoPronosticado = useMemo(() => {
+    if (!ritmoGlobal || distanciaPronostico <= 0) return null;
+    return pronosticarTiempoMs(ritmoGlobal.mejor, distanciaPronostico);
+  }, [ritmoGlobal, distanciaPronostico]);
 
   async function handleGuardarMeta(e: React.FormEvent) {
     e.preventDefault();
@@ -184,180 +191,244 @@ export default function DashboardCorredor({ corredor }: Props) {
   const metaLograda = meta && ritmoGlobal ? ritmoGlobal.mejor <= meta.ritmoObjetivoMsPor10m : false;
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-      <div className="card space-y-3">
-        <div className="flex items-center justify-between gap-2">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Últimos 30 días</h2>
-          {distanciasDisponibles.length > 1 ? (
-            <select
-              value={distanciaSeleccionada}
-              onChange={(e) => setDistanciaSeleccionada(Number(e.target.value))}
-              className="cursor-pointer rounded border border-border bg-white px-1.5 py-0.5 text-xs text-muted-foreground"
-              aria-label="Elegir distancia"
-            >
-              {distanciasDisponibles.map((d) => (
-                <option key={d} value={d}>
-                  {d} m
-                </option>
-              ))}
-            </select>
-          ) : (
-            <span className="text-xs text-muted-foreground">{distanciaSeleccionada} m</span>
-          )}
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <div className="font-heading text-2xl font-bold tabular-nums text-primary">
-              {formatearTiempo(stats.mejorMs)}
-            </div>
-            <div className="text-xs text-muted-foreground">Mejor (histórico)</div>
-          </div>
-          <div>
-            <div className="font-heading text-2xl font-bold tabular-nums text-foreground">
-              {formatearTiempo(stats.promedioMs)}
-            </div>
-            <div className="text-xs text-muted-foreground">Promedio</div>
-          </div>
-          <div>
-            <div className="font-heading text-2xl font-bold tabular-nums text-foreground">
-              {stats.totalIntentos30}
-            </div>
-            <div className="text-xs text-muted-foreground">Intentos (30 días)</div>
-          </div>
-          <div className="flex items-center gap-1">
-            <IconoLlama className="h-5 w-5 shrink-0 text-destructive" />
-            <div>
-              <div className="font-heading text-2xl font-bold tabular-nums text-foreground">{racha}</div>
-              <div className="text-xs text-muted-foreground">Días seguidos</div>
-            </div>
-          </div>
-        </div>
-        <p className="text-xs text-muted-foreground">
-          Ritmo:{' '}
-          <span className="font-heading font-semibold tabular-nums text-primary">
-            {formatearRitmo(stats.ritmoMejor)}
-          </span>
-        </p>
-        {stats.tendencia && (
-          <div
-            className={`flex items-center gap-1 text-sm font-medium ${
-              stats.tendencia === 'mejor' ? 'text-primary' : 'text-destructive'
-            }`}
-          >
-            {stats.tendencia === 'mejor' ? (
-              <IconoFlechaAbajo className="h-4 w-4" />
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Últimos 30 días</h2>
+            {distanciasDisponibles.length > 1 ? (
+              <select
+                value={distanciaSeleccionada}
+                onChange={(e) => setDistanciaSeleccionada(Number(e.target.value))}
+                className="cursor-pointer rounded border border-border bg-white px-1.5 py-0.5 text-xs text-muted-foreground"
+                aria-label="Elegir distancia"
+              >
+                {distanciasDisponibles.map((d) => (
+                  <option key={d} value={d}>
+                    {d} m
+                  </option>
+                ))}
+              </select>
             ) : (
-              <IconoFlechaArriba className="h-4 w-4" />
+              <span className="text-xs text-muted-foreground">{distanciaSeleccionada} m</span>
             )}
-            <span>{stats.tendencia === 'mejor' ? 'Bajando el tiempo' : 'Subiendo el tiempo'}</span>
           </div>
-        )}
-      </div>
-
-      <div className="space-y-3">
-        {stats.grafico.length >= 2 && (
-          <div className="card">
-            <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              Progreso reciente — {distanciaSeleccionada} m
-            </h2>
-            <svg viewBox="0 0 160 64" className="h-16 w-full overflow-visible" preserveAspectRatio="none">
-              {stats.grafico.map((g, idx) => {
-                const ancho = 160 / stats.grafico.length;
-                const alto = alturaBarra(g.ms);
-                const x = idx * ancho + ancho * 0.2;
-                return (
-                  <rect
-                    key={idx}
-                    x={x}
-                    y={64 - alto}
-                    width={ancho * 0.6}
-                    height={alto}
-                    rx={2}
-                    className={g.esMejor ? 'fill-accent' : 'fill-primary'}
-                  />
-                );
-              })}
-            </svg>
-            <p className="mt-1 text-xs text-muted-foreground">Más alto = más rápido. Verde = tu mejor tiempo.</p>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <div className="font-heading text-2xl font-bold tabular-nums text-primary">
+                {formatearTiempo(stats.mejorMs)}
+              </div>
+              <div className="text-xs text-muted-foreground">Mejor ({distanciaSeleccionada}m)</div>
+            </div>
+            <div>
+              <div className="font-heading text-2xl font-bold tabular-nums text-foreground">
+                {formatearTiempo(stats.promedioMs)}
+              </div>
+              <div className="text-xs text-muted-foreground">Promedio</div>
+            </div>
+            <div>
+              <div className="font-heading text-2xl font-bold tabular-nums text-foreground">
+                {stats.totalIntentos30}
+              </div>
+              <div className="text-xs text-muted-foreground">Intentos (30 días)</div>
+            </div>
+            <div className="flex items-center gap-1">
+              <IconoLlama className="h-5 w-5 shrink-0 text-destructive" />
+              <div>
+                <div className="font-heading text-2xl font-bold tabular-nums text-foreground">{racha}</div>
+                <div className="text-xs text-muted-foreground">Días seguidos</div>
+              </div>
+            </div>
           </div>
-        )}
+          <p className="text-xs text-muted-foreground">
+            Ritmo de velocidad:{' '}
+            <span className="font-heading font-semibold tabular-nums text-primary">
+              {formatearRitmo(stats.ritmoMejor)}
+            </span>
+          </p>
+          {stats.tendencia && (
+            <div
+              className={`flex items-center gap-1 text-sm font-medium ${
+                stats.tendencia === 'mejor' ? 'text-primary' : 'text-destructive'
+              }`}
+            >
+              {stats.tendencia === 'mejor' ? (
+                <IconoFlechaAbajo className="h-4 w-4" />
+              ) : (
+                <IconoFlechaArriba className="h-4 w-4" />
+              )}
+              <span>{stats.tendencia === 'mejor' ? 'Bajando el tiempo' : 'Subiendo el tiempo'}</span>
+            </div>
+          )}
+        </div>
 
-        <div className="card">
-          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-            <IconoObjetivo className="h-4 w-4" />
-            Meta de ritmo
-          </h2>
-
-          {!meta && !editandoMeta && (
-            <button onClick={() => setEditandoMeta(true)} className="btn-secondary w-full text-sm">
-              Definir meta
-            </button>
+        <div className="space-y-3">
+          {stats.grafico.length >= 2 && (
+            <div className="card">
+              <h2 className="mb-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                Progreso reciente — {distanciaSeleccionada} m
+              </h2>
+              <svg viewBox="0 0 160 64" className="h-16 w-full overflow-visible" preserveAspectRatio="none">
+                {stats.grafico.map((g, idx) => {
+                  const ancho = 160 / stats.grafico.length;
+                  const alto = alturaBarra(g.ms);
+                  const x = idx * ancho + ancho * 0.2;
+                  return (
+                    <rect
+                      key={idx}
+                      x={x}
+                      y={64 - alto}
+                      width={ancho * 0.6}
+                      height={alto}
+                      rx={2}
+                      className={g.esMejor ? 'fill-accent' : 'fill-primary'}
+                    />
+                  );
+                })}
+              </svg>
+              <p className="mt-1 text-xs text-muted-foreground">Más alto = más rápido. Verde = tu mejor tiempo.</p>
+            </div>
           )}
 
-          {editandoMeta && (
-            <form onSubmit={handleGuardarMeta} className="space-y-2">
-              {errorMeta && <p className="text-xs text-destructive">{errorMeta}</p>}
-              <label className="block text-xs text-muted-foreground" htmlFor="meta-segundos">
-                Ritmo objetivo (segundos cada 10 metros)
-              </label>
-              <div className="flex gap-2">
-                <input
-                  id="meta-segundos"
-                  type="number"
-                  step="0.01"
-                  min="0.01"
-                  value={metaTexto}
-                  onChange={(e) => setMetaTexto(e.target.value)}
-                  placeholder="Ej. 1.75"
-                  autoFocus
-                  className="input"
-                  required
-                />
-                <button type="submit" disabled={guardandoMeta} className="btn-primary px-4 text-sm">
-                  {guardandoMeta ? '...' : 'Guardar'}
+          <div className="card">
+            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+              <IconoObjetivo className="h-4 w-4" />
+              Meta de velocidad lanzada
+            </h2>
+
+            {!meta && !editandoMeta && (
+              <button onClick={() => setEditandoMeta(true)} className="btn-secondary w-full text-sm">
+                Definir meta
+              </button>
+            )}
+
+            {editandoMeta && (
+              <form onSubmit={handleGuardarMeta} className="space-y-2">
+                {errorMeta && <p className="text-xs text-destructive">{errorMeta}</p>}
+                <label className="block text-xs text-muted-foreground" htmlFor="meta-segundos">
+                  Ritmo objetivo por cada 10m lanzados (segundos)
+                </label>
+                <div className="flex gap-2">
+                  <input
+                    id="meta-segundos"
+                    type="number"
+                    step="0.01"
+                    min="0.01"
+                    value={metaTexto}
+                    onChange={(e) => setMetaTexto(e.target.value)}
+                    placeholder="Ej. 0.95"
+                    autoFocus
+                    className="input"
+                    required
+                  />
+                  <button type="submit" disabled={guardandoMeta} className="btn-primary px-4 text-sm">
+                    {guardandoMeta ? '...' : 'Guardar'}
+                  </button>
+                </div>
+              </form>
+            )}
+
+            {meta && !editandoMeta && ritmoGlobal && (
+              <div className="space-y-2">
+                {metaLograda ? (
+                  <div className="flex items-center gap-2 text-sm font-medium text-primary">
+                    <IconoCheck className="h-5 w-5 text-accent" />
+                    ¡Meta lograda!
+                  </div>
+                ) : (
+                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
+                    <div
+                      className="h-full rounded-full bg-accent transition-all duration-300"
+                      style={{ width: `${progreso}%` }}
+                    />
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground">
+                  Mejor ritmo:{' '}
+                  <span className="font-heading font-semibold tabular-nums text-primary">
+                    {formatearRitmo(ritmoGlobal.mejor)}
+                  </span>{' '}
+                  — Meta:{' '}
+                  <span className="font-heading font-semibold tabular-nums text-primary">
+                    {formatearRitmo(meta.ritmoObjetivoMsPor10m)}
+                  </span>
+                </p>
+                <button
+                  onClick={() => {
+                    setMetaTexto((meta.ritmoObjetivoMsPor10m / 1000).toString());
+                    setEditandoMeta(true);
+                  }}
+                  className="btn-ghost text-xs"
+                >
+                  Cambiar meta
                 </button>
               </div>
-            </form>
-          )}
-
-          {meta && !editandoMeta && ritmoGlobal && (
-            <div className="space-y-2">
-              {metaLograda ? (
-                <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                  <IconoCheck className="h-5 w-5 text-accent" />
-                  ¡Meta lograda!
-                </div>
-              ) : (
-                <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
-                  <div
-                    className="h-full rounded-full bg-accent transition-all duration-300"
-                    style={{ width: `${progreso}%` }}
-                  />
-                </div>
-              )}
-              <p className="text-sm text-muted-foreground">
-                Mejor ritmo:{' '}
-                <span className="font-heading font-semibold tabular-nums text-primary">
-                  {formatearRitmo(ritmoGlobal.mejor)}
-                </span>{' '}
-                — Meta:{' '}
-                <span className="font-heading font-semibold tabular-nums text-primary">
-                  {formatearRitmo(meta.ritmoObjetivoMsPor10m)}
-                </span>
-              </p>
-              <button
-                onClick={() => {
-                  setMetaTexto((meta.ritmoObjetivoMsPor10m / 1000).toString());
-                  setEditandoMeta(true);
-                }}
-                className="btn-ghost text-xs"
-              >
-                Cambiar meta
-              </button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
+
+      {/* PRONOSTICADOR INTERACTIVO DE TIEMPOS POR METROS */}
+      {ritmoGlobal && (
+        <div className="card border-primary/20 bg-primary/5 space-y-3">
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-primary">
+                ⏱️ Pronosticador por Metros (BMX)
+              </h2>
+              <p className="text-xs text-muted-foreground">
+                Calcula tu tiempo estimado para cualquier distancia según tu mejor ritmo de velocidad lanzada.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <div className="flex-1 space-y-1">
+              <label htmlFor="distancia-pronostico" className="block text-xs font-medium text-muted-foreground">
+                Distancia a probar (metros):
+              </label>
+              <div className="flex items-center gap-2">
+                <input
+                  id="distancia-pronostico"
+                  type="number"
+                  min="1"
+                  max="500"
+                  value={distanciaPronostico}
+                  onChange={(e) => setDistanciaPronostico(Math.max(1, Number(e.target.value)))}
+                  className="input max-w-[120px]"
+                />
+                <div className="flex flex-wrap gap-1">
+                  {[10, 15, 20, 25, 30, 40, 50].map((d) => (
+                    <button
+                      key={d}
+                      type="button"
+                      onClick={() => setDistanciaPronostico(d)}
+                      className={`rounded px-2 py-1 text-xs font-medium border transition-colors ${
+                        distanciaPronostico === d
+                          ? 'bg-primary text-primary-foreground border-primary'
+                          : 'bg-white text-muted-foreground border-border hover:bg-surface'
+                      }`}
+                    >
+                      {d}m
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {tiempoPronosticado !== null && (
+              <div className="rounded-lg border border-primary/30 bg-white p-3 text-center sm:min-w-[160px]">
+                <div className="text-xs font-medium text-muted-foreground">Tiempo Estimado ({distanciaPronostico}m)</div>
+                <div className="font-heading text-3xl font-extrabold tabular-nums text-primary">
+                  {formatearTiempo(tiempoPronosticado)}
+                </div>
+                <div className="text-[10px] text-muted-foreground">Incluye +1.15s de arranque gate</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
+

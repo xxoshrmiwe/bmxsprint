@@ -82,3 +82,32 @@ export async function generarEnlaceEntrarComo(email: string): Promise<string> {
   const { link } = await res.json();
   return link;
 }
+
+export interface ParametrosCampana {
+  asunto: string;
+  html: string;
+  esPrueba: boolean;
+  emailPrueba?: string;
+}
+
+export interface ResultadoCampana {
+  ok: boolean;
+  enviados: number;
+  errores: number;
+  mensaje?: string;
+}
+
+export async function enviarCampanaEmail(params: ParametrosCampana): Promise<ResultadoCampana> {
+  const headers = await encabezadoAuth();
+  const res = await fetch('/api/admin/enviar-campana', {
+    method: 'POST',
+    headers: { ...headers, 'Content-Type': 'application/json' },
+    body: JSON.stringify(params)
+  });
+  const cuerpo = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    throw new Error(cuerpo.error ?? 'No se pudo enviar la campaña.');
+  }
+  return cuerpo;
+}
+

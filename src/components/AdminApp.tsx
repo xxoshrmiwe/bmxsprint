@@ -10,9 +10,12 @@ import {
 } from '../lib/adminApi';
 import CampoPassword from './CampoPassword';
 import OlvideContrasena from './OlvideContrasena';
+import AdminEmailCampaign from './AdminEmailCampaign';
 import { IconoAlerta, IconoBuscar } from './Icono';
 
 type Vista = 'cargando' | 'login' | 'olvide-password' | 'sin-acceso' | 'dashboard';
+type TabAdmin = 'corredores' | 'emails';
+
 
 function formatearFecha(valor: string | number | null): string {
   if (!valor) return '—';
@@ -21,7 +24,9 @@ function formatearFecha(valor: string | number | null): string {
 
 export default function AdminApp() {
   const [vista, setVista] = useState<Vista>('cargando');
+  const [tabAdmin, setTabAdmin] = useState<TabAdmin>('corredores');
   const [datos, setDatos] = useState<DatosAdmin | null>(null);
+
   const [busqueda, setBusqueda] = useState('');
   const [error, setError] = useState<string | null>(null);
 
@@ -230,15 +235,46 @@ export default function AdminApp() {
         </div>
       )}
 
-      <div className="relative">
-        <IconoBuscar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-        <input
-          value={busqueda}
-          onChange={(e) => setBusqueda(e.target.value)}
-          placeholder="Buscar por nombre o correo..."
-          className="input pl-9"
-        />
+      <div className="flex border-b border-border">
+        <button
+          onClick={() => setTabAdmin('corredores')}
+          className={`cursor-pointer border-b-2 px-4 py-2 font-medium text-sm transition-colors ${
+            tabAdmin === 'corredores'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Corredores ({datos?.usuarios.length ?? 0})
+        </button>
+        <button
+          onClick={() => setTabAdmin('emails')}
+          className={`cursor-pointer border-b-2 px-4 py-2 font-medium text-sm transition-colors ${
+            tabAdmin === 'emails'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Campañas de Email 📧
+        </button>
       </div>
+
+      {tabAdmin === 'emails' ? (
+        <AdminEmailCampaign
+          emailAdmin={email || (datos?.usuarios[0]?.email ?? '')}
+          totalCorredores={datos?.usuarios.length ?? 0}
+        />
+      ) : (
+        <>
+          <div className="relative">
+            <IconoBuscar className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar por nombre o correo..."
+              className="input pl-9"
+            />
+          </div>
+
 
       <div className="overflow-x-auto rounded-xl border border-border bg-white">
         <table className="w-full min-w-[720px] text-left text-sm">
@@ -334,6 +370,9 @@ export default function AdminApp() {
           </tbody>
         </table>
       </div>
+        </>
+      )}
     </div>
   );
 }
+
