@@ -343,6 +343,18 @@ export default function DashboardCorredor({ corredor }: Props) {
               <IconoObjetivo className="h-4 w-4 text-primary" />
               Meta en {distanciaSeleccionada} m
             </h3>
+
+            {meta && !editandoMeta && tiempoObjetivoMs && (
+              <button
+                onClick={() => {
+                  setMetaTexto((tiempoObjetivoMs / 1000).toFixed(2));
+                  setEditandoMeta(true);
+                }}
+                className="cursor-pointer rounded-lg border border-border bg-white px-2.5 py-1 text-xs font-bold text-primary shadow-xs transition-all hover:bg-primary hover:text-white"
+              >
+                ✏️ Ajustar Meta
+              </button>
+            )}
           </div>
 
           {!meta && !editandoMeta && (
@@ -358,9 +370,9 @@ export default function DashboardCorredor({ corredor }: Props) {
           )}
 
           {editandoMeta && (
-            <form onSubmit={handleGuardarMeta} className="space-y-3">
+            <form onSubmit={handleGuardarMeta} className="space-y-3 rounded-lg border border-primary/30 bg-primary/5 p-3">
               {errorMeta && <p className="text-xs text-destructive">{errorMeta}</p>}
-              <label className="block text-xs text-muted-foreground font-medium" htmlFor="meta-segundos">
+              <label className="block text-xs font-bold text-foreground" htmlFor="meta-segundos">
                 Tiempo objetivo para {distanciaSeleccionada}m (segundos):
               </label>
               <div className="flex gap-2">
@@ -373,11 +385,18 @@ export default function DashboardCorredor({ corredor }: Props) {
                   onChange={(e) => setMetaTexto(e.target.value)}
                   placeholder="Ej. 5.00"
                   autoFocus
-                  className="input flex-1"
+                  className="input flex-1 bg-white font-heading text-lg font-bold"
                   required
                 />
-                <button type="submit" disabled={guardandoMeta} className="btn-primary px-4 text-sm font-semibold">
+                <button type="submit" disabled={guardandoMeta} className="btn-primary px-4 text-xs font-bold">
                   {guardandoMeta ? '...' : 'Guardar'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditandoMeta(false)}
+                  className="btn-ghost px-3 text-xs"
+                >
+                  Cancelar
                 </button>
               </div>
             </form>
@@ -394,7 +413,7 @@ export default function DashboardCorredor({ corredor }: Props) {
                 <div className="space-y-1.5">
                   <div className="flex justify-between text-xs font-semibold text-muted-foreground">
                     <span>Progreso hacia la meta</span>
-                    <span className="text-primary">Faltan {faltanSegundos.toFixed(2)}s</span>
+                    <span className="text-primary font-bold">Faltan {faltanSegundos.toFixed(2)}s</span>
                   </div>
                   <div className="h-2.5 w-full overflow-hidden rounded-full bg-surface border border-border/50">
                     <div
@@ -407,13 +426,13 @@ export default function DashboardCorredor({ corredor }: Props) {
 
               <div className="flex justify-between items-center text-xs bg-surface p-3 rounded-lg border border-border/60">
                 <div>
-                  <span className="text-muted-foreground block text-[10px]">MEJOR TIEMPO</span>
+                  <span className="text-muted-foreground block text-[10px] font-semibold">MEJOR TIEMPO</span>
                   <span className="font-heading font-extrabold text-base text-foreground tabular-nums">
                     {formatearTiempo(stats.mejorMs)}
                   </span>
                 </div>
                 <div className="text-right">
-                  <span className="text-muted-foreground block text-[10px]">TIEMPO META</span>
+                  <span className="text-muted-foreground block text-[10px] font-semibold">TIEMPO META</span>
                   <span className="font-heading font-extrabold text-base text-primary tabular-nums">
                     {formatearTiempo(tiempoObjetivoMs)}
                   </span>
@@ -425,13 +444,14 @@ export default function DashboardCorredor({ corredor }: Props) {
                   setMetaTexto((tiempoObjetivoMs / 1000).toFixed(2));
                   setEditandoMeta(true);
                 }}
-                className="btn-ghost text-xs -ml-2"
+                className="btn-secondary w-full py-2.5 text-xs font-bold flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
               >
-                ✏️ Cambiar meta
+                ✏️ Cambiar tiempo meta ({distanciaSeleccionada}m)
               </button>
             </div>
           )}
         </div>
+
       </div>
 
       {/* PRONOSTICADOR INTERACTIVO DE TIEMPOS POR METROS */}
