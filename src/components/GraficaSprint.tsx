@@ -32,9 +32,27 @@ export default function GraficaSprint({ telemetria, tiempoTotalMs, numeroIntento
   const avgAcel = (aceleraciones.reduce((acc, curr) => acc + curr, 0) / aceleraciones.length).toFixed(1);
   const maxPunto = telemetria.find((p) => p.a === maxAcel) || telemetria[0];
 
-  // Velocidad GPS Doppler (m/s a km/h)
-  const velocidadesMs = telemetria.map((p) => p.v ?? 0);
-  const maxVelocidadMs = Math.max(0, ...velocidadesMs);
+  // Velocidad GPS Doppler o integración inercial estimada (m/s a km/h)
+  const velocidadesGpsMs = telemetria.map((p) => p.v ?? 0);
+  let maxVelocidadMs = Math.max(0, ...velocidadesGpsMs);
+
+  // Si GPS dio 0 (prueba bajo techo), estimar velocidad integrada a partir de la aceleración
+  if (maxVelocidadMs === 0) {
+    let vIntegrada = 0;
+    let maxVIntegrada = 0;
+    for (let i = 1; i < telemetria.length; i++) {
+      const dt = (telemetria[i].t - telemetria[i - 1].t) / 1000;
+      const a = telemetria[i].a;
+      if (a > 1.5) {
+        vIntegrada += a * dt * 0.45; // Factor de amortiguación para estimación realista de bicicleta
+        if (vIntegrada > maxVIntegrada) maxVIntegrada = vIntegrada;
+      } else {
+        vIntegrada = Math.max(0, vIntegrada - 2.0 * dt);
+      }
+    }
+    maxVelocidadMs = maxVIntegrada;
+  }
+
   const maxVelocidadKmh = (maxVelocidadMs * 3.6).toFixed(1);
 
   // Dimensiones del gráfico SVG
@@ -69,51 +87,49 @@ export default function GraficaSprint({ telemetria, tiempoTotalMs, numeroIntento
   const maxY = height - padding.bottom - ((maxPunto.a - yMin) / rangeY) * (height - padding.top - padding.bottom);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-      <div className="w-full max-w-2xl bg-card border border-border rounded-2xl p-6 shadow-2xl overflow-hidden text-card-foreground">
-        {/* Cabecera */}
-        <div className="flex items-center justify-between pb-4 border-b border-border mb-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/85 backdrop-blur-md p-4 animate-in fade-in duration-200">
+      <div className="w-full max-w-2xl bg-slate-900 border border-slate-700/80 rounded-2xl p-6 shadow-2xl overflow-hidden text-slate-100">
+        {/* Cabecera de Alto Contraste */}
+        <div className="flex items-center justify-between pb-4 border-b border-slate-800 mb-4">
           <div>
-            <h3 className="text-xl font-bold flex items-center gap-2">
+            <h3 className="text-xl font-black text-white flex items-center gap-2">
               <span>📊 Telemetría del Sprint</span>
               {numeroIntento !== undefined && (
-                <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary border border-primary/30">
+                <span className="text-xs px-2.5 py-0.5 rounded-full bg-sky-500/20 text-sky-300 border border-sky-500/30 font-bold">
                   Intento #{numeroIntento}
                 </span>
               )}
             </h3>
-            <p className="text-xs text-muted-foreground mt-0.5">
-              Tiempo Total: <strong className="text-foreground">{formatearTiempo(tiempoTotalMs)}</strong> ({telemetria.length} lecturas capturadas)
+            <p className="text-xs text-slate-300 mt-1">
+              Tiempo Total: <strong className="text-white font-bold">{formatearTiempo(tiempoTotalMs)}</strong> ({telemetria.length} lecturas capturadas)
             </p>
           </div>
           <button
             onClick={onCerrar}
-            className="p-2 text-muted-foreground hover:text-foreground rounded-lg hover:bg-accent/50 transition-colors"
+            className="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition-colors"
           >
             ✕
           </button>
         </div>
 
-        {/* Tarjetas de Métricas Rápidas */}
-        <div className={`grid ${maxVelocidadMs > 0 ? 'grid-cols-4' : 'grid-cols-3'} gap-2.5 mb-4`}>
-          <div className="bg-background/60 border border-border rounded-xl p-2.5 text-center">
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Pico Fuerza</span>
-            <p className="text-base font-black text-emerald-400">{maxAcel.toFixed(1)} <span className="text-[10px] font-normal text-muted-foreground">m/s²</span></p>
+        {/* 4 Tarjetas de Métricas Rápidas */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 mb-4">
+          <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 text-center">
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Pico Fuerza</span>
+            <p className="text-lg font-black text-emerald-400 mt-0.5">{maxAcel.toFixed(1)} <span className="text-[10px] font-normal text-slate-400">m/s²</span></p>
           </div>
-          <div className="bg-background/60 border border-border rounded-xl p-2.5 text-center">
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Fuerza Media</span>
-            <p className="text-base font-black text-amber-400">{avgAcel} <span className="text-[10px] font-normal text-muted-foreground">m/s²</span></p>
+          <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 text-center">
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Fuerza Media</span>
+            <p className="text-lg font-black text-amber-400 mt-0.5">{avgAcel} <span className="text-[10px] font-normal text-slate-400">m/s²</span></p>
           </div>
-          <div className="bg-background/60 border border-border rounded-xl p-2.5 text-center">
-            <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Tiempo Pico</span>
-            <p className="text-base font-black text-sky-400">{(maxPunto.t / 1000).toFixed(2)} <span className="text-[10px] font-normal text-muted-foreground">s</span></p>
+          <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 text-center">
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Tiempo Pico</span>
+            <p className="text-lg font-black text-sky-400 mt-0.5">{(maxPunto.t / 1000).toFixed(2)} <span className="text-[10px] font-normal text-slate-400">s</span></p>
           </div>
-          {maxVelocidadMs > 0 && (
-            <div className="bg-background/60 border border-border rounded-xl p-2.5 text-center">
-              <span className="text-[10px] uppercase font-semibold text-muted-foreground tracking-wider">Vel. Punta</span>
-              <p className="text-base font-black text-violet-400">{maxVelocidadKmh} <span className="text-[10px] font-normal text-muted-foreground">km/h</span></p>
-            </div>
-          )}
+          <div className="bg-slate-800/80 border border-slate-700/60 rounded-xl p-3 text-center">
+            <span className="text-[10px] uppercase font-bold text-slate-400 tracking-wider block">Vel. Punta</span>
+            <p className="text-lg font-black text-violet-400 mt-0.5">{maxVelocidadKmh} <span className="text-[10px] font-normal text-slate-400">km/h</span></p>
+          </div>
         </div>
 
         {/* Gráfico SVG */}

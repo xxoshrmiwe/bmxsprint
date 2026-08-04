@@ -468,14 +468,29 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
         </span>
         {estado === 'detenido' && telemetriaUltimoSprint.length > 0 && (
           (() => {
-            const vMs = Math.max(0, ...telemetriaUltimoSprint.map((p) => p.v ?? 0));
-            return vMs > 0 ? (
-              <div className="mt-1 flex justify-center">
-                <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 border border-violet-500/20 px-3 py-1 text-xs font-extrabold text-violet-400">
+            let vMs = Math.max(0, ...telemetriaUltimoSprint.map((p) => p.v ?? 0));
+            if (vMs === 0 && telemetriaUltimoSprint.length > 1) {
+              let vInteg = 0;
+              let maxInteg = 0;
+              for (let i = 1; i < telemetriaUltimoSprint.length; i++) {
+                const dt = (telemetriaUltimoSprint[i].t - telemetriaUltimoSprint[i - 1].t) / 1000;
+                const a = telemetriaUltimoSprint[i].a;
+                if (a > 1.5) {
+                  vInteg += a * dt * 0.45;
+                  if (vInteg > maxInteg) maxInteg = vInteg;
+                } else {
+                  vInteg = Math.max(0, vInteg - 2.0 * dt);
+                }
+              }
+              vMs = maxInteg;
+            }
+            return (
+              <div className="mt-2 flex justify-center">
+                <span className="inline-flex items-center gap-1.5 rounded-full bg-violet-500/15 border border-violet-500/30 px-3.5 py-1 text-xs font-black text-violet-600 dark:text-violet-400 shadow-xs">
                   ⚡ Vel. Punta: {(vMs * 3.6).toFixed(1)} km/h
                 </span>
               </div>
-            ) : null;
+            );
           })()
         )}
         <p className="mt-2 text-sm text-muted-foreground">
@@ -616,7 +631,22 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
           </h2>
           <ul className="divide-y divide-border rounded-xl border border-border bg-white">
             {intentosSesion.map((i) => {
-              const vMs = Math.max(0, ...(i.telemetria?.map((p) => p.v ?? 0) ?? []));
+              let vMs = Math.max(0, ...(i.telemetria?.map((p) => p.v ?? 0) ?? []));
+              if (vMs === 0 && i.telemetria && i.telemetria.length > 1) {
+                let vInteg = 0;
+                let maxInteg = 0;
+                for (let idx = 1; idx < i.telemetria.length; idx++) {
+                  const dt = (i.telemetria[idx].t - i.telemetria[idx - 1].t) / 1000;
+                  const a = i.telemetria[idx].a;
+                  if (a > 1.5) {
+                    vInteg += a * dt * 0.45;
+                    if (vInteg > maxInteg) maxInteg = vInteg;
+                  } else {
+                    vInteg = Math.max(0, vInteg - 2.0 * dt);
+                  }
+                }
+                vMs = maxInteg;
+              }
               const vKmh = (vMs * 3.6).toFixed(1);
               return (
                 <li key={i.id} className="flex items-center justify-between px-4 py-2.5 text-sm">
@@ -626,7 +656,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
                       <span className="font-heading font-semibold tabular-nums text-primary block">
                         {formatearTiempo(i.tiempoTotalMs)}
                       </span>
-                      {vMs > 0 && (
+                      {i.telemetria && i.telemetria.length > 0 && (
                         <span className="text-[10px] font-bold text-violet-500 block -mt-1">
                           ⚡ {vKmh} km/h
                         </span>

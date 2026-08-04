@@ -235,7 +235,22 @@ export default function Historial({ corredor, onVolver }: Props) {
                 <div className="divide-y divide-border/60">
                   {sesion.intentos.map((intento) => {
                     const esMejor = intento.tiempoTotalMs === mejorTiempo;
-                    const vMs = Math.max(0, ...(intento.telemetria?.map((p) => p.v ?? 0) ?? []));
+                    let vMs = Math.max(0, ...(intento.telemetria?.map((p) => p.v ?? 0) ?? []));
+                    if (vMs === 0 && intento.telemetria && intento.telemetria.length > 1) {
+                      let vInteg = 0;
+                      let maxInteg = 0;
+                      for (let idx = 1; idx < intento.telemetria.length; idx++) {
+                        const dt = (intento.telemetria[idx].t - intento.telemetria[idx - 1].t) / 1000;
+                        const a = intento.telemetria[idx].a;
+                        if (a > 1.5) {
+                          vInteg += a * dt * 0.45;
+                          if (vInteg > maxInteg) maxInteg = vInteg;
+                        } else {
+                          vInteg = Math.max(0, vInteg - 2.0 * dt);
+                        }
+                      }
+                      vMs = maxInteg;
+                    }
                     const vKmh = (vMs * 3.6).toFixed(1);
                     return (
                       <div
@@ -253,7 +268,7 @@ export default function Historial({ corredor, onVolver }: Props) {
                             <span className="font-heading text-lg font-bold tabular-nums text-foreground block">
                               {formatearTiempo(intento.tiempoTotalMs)}
                             </span>
-                            {vMs > 0 && (
+                            {intento.telemetria && intento.telemetria.length > 0 && (
                               <span className="text-[10px] font-bold text-violet-500 block -mt-1">
                                 ⚡ {vKmh} km/h
                               </span>
