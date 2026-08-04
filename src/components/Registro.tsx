@@ -89,10 +89,12 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
           </label>
           <input
             id="email"
+            name="username"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="username"
             className="input"
             placeholder="papa@correo.com"
           />
@@ -130,13 +132,27 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
           <label className="mb-1 block text-sm text-muted-foreground" htmlFor="password">
             Contraseña
           </label>
-          <CampoPassword id="password" value={password} onChange={setPassword} required autoComplete="new-password" />
+          <CampoPassword
+            id="password"
+            name="password"
+            value={password}
+            onChange={setPassword}
+            required
+            autoComplete="new-password"
+          />
         </div>
         <div>
           <label className="mb-1 block text-sm text-muted-foreground" htmlFor="confirmar">
             Confirmar contraseña
           </label>
-          <CampoPassword id="confirmar" value={confirmar} onChange={setConfirmar} required autoComplete="new-password" />
+          <CampoPassword
+            id="confirmar"
+            name="confirmar-password"
+            value={confirmar}
+            onChange={setConfirmar}
+            required
+            autoComplete="new-password"
+          />
         </div>
         <button type="submit" disabled={creando} className="btn-primary w-full">
           {creando ? 'Creando...' : 'Registrarme'}

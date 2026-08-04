@@ -2,26 +2,30 @@ import { useState } from 'react';
 
 interface Props {
   id: string;
+  name?: string;
   value: string;
   onChange: (value: string) => void;
   autoFocus?: boolean;
   required?: boolean;
   autoComplete?: string;
+  placeholder?: string;
 }
 
-export default function CampoPassword({ id, value, onChange, autoFocus, required, autoComplete }: Props) {
+export default function CampoPassword({ id, name, value, onChange, autoFocus, required, autoComplete, placeholder }: Props) {
   const [visible, setVisible] = useState(false);
 
   return (
     <div className="relative">
       <input
         id={id}
+        name={name ?? id}
         type={visible ? 'text' : 'password'}
         value={value}
         onChange={(e) => onChange(e.target.value)}
         autoFocus={autoFocus}
         required={required}
         autoComplete={autoComplete}
+        placeholder={placeholder}
         className="input pr-10"
       />
       <button

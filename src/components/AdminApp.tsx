@@ -163,11 +163,13 @@ export default function AdminApp() {
             </label>
             <input
               id="email"
+              name="username"
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
+              autoComplete="username"
               className="input"
             />
           </div>
@@ -175,7 +177,14 @@ export default function AdminApp() {
             <label className="mb-1 block text-sm text-muted-foreground" htmlFor="password">
               Contraseña
             </label>
-            <CampoPassword id="password" value={password} onChange={setPassword} required autoComplete="current-password" />
+            <CampoPassword
+              id="password"
+              name="password"
+              value={password}
+              onChange={setPassword}
+              required
+              autoComplete="current-password"
+            />
           </div>
           <label className="flex cursor-pointer items-center gap-2 text-sm text-muted-foreground">
             <input
