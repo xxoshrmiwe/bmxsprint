@@ -5,7 +5,15 @@ import { obtenerClienteAdmin } from '../_lib/supabaseAdmin.js';
 const REMITENTE_DEFAULT = process.env.RESEND_FROM_EMAIL || 'GATERIGHT BMX <noticias@gaterightbmx.com>';
 const MAX_LARGO_HTML = 50000;
 
+// Lista de dominios ficticios/de prueba que Resend rechaza estrictamente
+const DOMINIOS_DISCARD = ['example.com', 'example.org', 'example.net', 'test.com', 'testing.com', 'localhost', 'invalid'];
 
+function esEmailValidoParaResend(email: string): boolean {
+  if (!email || !email.includes('@')) return false;
+  const dominio = email.split('@')[1]?.toLowerCase().trim();
+  if (!dominio) return false;
+  return !DOMINIOS_DISCARD.some((d) => dominio === d || dominio.endsWith('.' + d));
+}
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method !== 'POST') {
@@ -68,10 +76,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       destinatarios = (data.users ?? [])
         .map((u) => u.email?.trim().toLowerCase())
-        .filter((e): e is string => Boolean(e && e.includes('@')));
+        .filter((e): e is string => Boolean(e && esEmailValidoParaResend(e)));
 
       if (destinatarios.length === 0) {
-        res.status(400).json({ error: 'No se encontraron corredores con correo registrado.' });
+        res.status(400).json({ error: 'No se encontraron corredores con correos válidos para envío.' });
         return;
       }
     }
@@ -80,67 +88,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     let totalErrores = 0;
     let ultimoErrorResend = '';
 
-    if (destinatarios.length === 1) {
-      // Envío individual a través del endpoint estándar de Resend
-      const respuesta = await fetch('https://api.resend.com/emails', {
-        method: 'POST',
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          from: REMITENTE_DEFAULT,
-          to: [destinatarios[0]],
-          subject: asunto.trim(),
-          html
-        })
+    // Enviar a los destinatarios mediante solicitudes individuales tolerantes a fallos (en paralelo de 5 en 5)
+    const TAMANO_CONCURRENCIA = 5;
+    for (let i = 0; i < destinatarios.length; i += TAMANO_CONCURRENCIA) {
+      const grupo = destinatarios.slice(i, i + TAMANO_CONCURRENCIA);
+
+      const promesas = grupo.map(async (destino) => {
+        try {
+          const respuesta = await fetch('https://api.resend.com/emails', {
+            method: 'POST',
+            headers: {
+              Authorization: `Bearer ${apiKey}`,
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+              from: REMITENTE_DEFAULT,
+              to: [destino],
+              subject: asunto.trim(),
+              html
+            })
+          });
+
+          if (respuesta.ok) {
+            return { ok: true };
+          } else {
+            const errorText = await respuesta.text();
+            let msj = errorText;
+            try {
+              const jsonErr = JSON.parse(errorText);
+              msj = jsonErr.message || jsonErr.error || errorText;
+            } catch {
+              // usar errorText
+            }
+            return { ok: false, error: msj };
+          }
+        } catch (err) {
+          return { ok: false, error: err instanceof Error ? err.message : 'Error de red' };
+        }
       });
 
-      if (respuesta.ok) {
-        totalEnviados = 1;
-      } else {
-        totalErrores = 1;
-        const errorText = await respuesta.text();
-        try {
-          const jsonErr = JSON.parse(errorText);
-          ultimoErrorResend = jsonErr.message || jsonErr.error || errorText;
-        } catch {
-          ultimoErrorResend = errorText;
-        }
-      }
-    } else {
-      // Envío por lotes de 100 correos mediante /emails/batch
-      const TAMANO_LOTE = 100;
-      for (let i = 0; i < destinatarios.length; i += TAMANO_LOTE) {
-        const loteEmails = destinatarios.slice(i, i + TAMANO_LOTE);
+      const resultados = await Promise.all(promesas);
 
-        const batchPayload = loteEmails.map((dest) => ({
-          from: REMITENTE_DEFAULT,
-          to: [dest],
-          subject: asunto.trim(),
-          html
-        }));
-
-        const respuesta = await fetch('https://api.resend.com/emails/batch', {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${apiKey}`,
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify(batchPayload)
-        });
-
-        if (respuesta.ok) {
-          totalEnviados += loteEmails.length;
+      for (const r of resultados) {
+        if (r.ok) {
+          totalEnviados++;
         } else {
-          totalErrores += loteEmails.length;
-          const errorText = await respuesta.text();
-          try {
-            const jsonErr = JSON.parse(errorText);
-            ultimoErrorResend = jsonErr.message || jsonErr.error || errorText;
-          } catch {
-            ultimoErrorResend = errorText;
-          }
+          totalErrores++;
+          if (r.error) ultimoErrorResend = r.error;
         }
       }
     }
@@ -148,7 +142,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (totalEnviados === 0 && totalErrores > 0) {
       res.status(400).json({
         ok: false,
-        error: `Resend rechazó el envío: ${ultimoErrorResend || 'Verifica la API key y límites de Resend.'}`
+        error: `Resend rechazó el envío: ${ultimoErrorResend || 'Verifica la configuración de tu cuenta.'}`
       });
       return;
     }
@@ -159,7 +153,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       errores: totalErrores,
       mensaje: esPrueba
         ? `Correo de prueba enviado con éxito a ${destinatarios[0]}.`
-        : `Campaña enviada con éxito a ${totalEnviados} corredor(es).`
+        : `Campaña procesada: ${totalEnviados} correo(s) enviado(s) con éxito${totalErrores > 0 ? `, ${totalErrores} omitido(s)` : ''}.`
     });
   } catch (err) {
     console.error('Error al procesar envío de campaña de email:', err);
