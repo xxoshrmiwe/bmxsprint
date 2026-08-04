@@ -149,12 +149,14 @@ export default function DashboardCorredor({ corredor }: Props) {
 
   async function handleGuardarMeta(e: React.FormEvent) {
     e.preventDefault();
-    const segundos = Number(metaTexto);
-    if (!segundos || segundos <= 0) return;
+    const segundosObjetivo = Number(metaTexto);
+    if (!segundosObjetivo || segundosObjetivo <= 0 || !distanciaSeleccionada) return;
     setGuardandoMeta(true);
     setErrorMeta(null);
     try {
-      const nuevaMeta = await guardarMeta(corredor.id, segundos * 1000);
+      // Convertir tiempo objetivo ingresado para la distancia seleccionada a ms/10m
+      const ritmoMsPor10m = (segundosObjetivo * 1000) / (distanciaSeleccionada / 10);
+      const nuevaMeta = await guardarMeta(corredor.id, ritmoMsPor10m);
       setMeta(nuevaMeta);
       setEditandoMeta(false);
       setMetaTexto('');
@@ -186,9 +188,19 @@ export default function DashboardCorredor({ corredor }: Props) {
     return 16 + ((max - ms) / rango) * 48;
   };
 
-  const progreso =
-    meta && ritmoGlobal ? calcularProgreso(ritmoGlobal.primero, ritmoGlobal.mejor, meta.ritmoObjetivoMsPor10m) : 0;
-  const metaLograda = meta && ritmoGlobal ? ritmoGlobal.mejor <= meta.ritmoObjetivoMsPor10m : false;
+  // Cálculo de tiempo objetivo en milisegundos para la distancia actualmente seleccionada
+  const tiempoObjetivoMs = meta && distanciaSeleccionada
+    ? meta.ritmoObjetivoMsPor10m * (distanciaSeleccionada / 10)
+    : null;
+
+  const metaLograda = Boolean(tiempoObjetivoMs && stats && stats.mejorMs <= tiempoObjetivoMs);
+  const porcentajeProgreso = Boolean(tiempoObjetivoMs && stats)
+    ? Math.min(100, Math.max(0, (tiempoObjetivoMs! / stats.mejorMs) * 100))
+    : 0;
+  const faltanSegundos = Boolean(tiempoObjetivoMs && stats && !metaLograda)
+    ? (stats.mejorMs - tiempoObjetivoMs!) / 1000
+    : 0;
+
 
   return (
     <div className="space-y-4">
@@ -290,15 +302,23 @@ export default function DashboardCorredor({ corredor }: Props) {
             </div>
           )}
 
-          <div className="card">
-            <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
-              <IconoObjetivo className="h-4 w-4" />
-              Meta de velocidad lanzada
-            </h2>
+          <div className="card space-y-3">
+            <div className="flex items-center justify-between">
+              <h2 className="flex items-center gap-2 text-sm font-semibold uppercase tracking-wide text-muted-foreground">
+                <IconoObjetivo className="h-4 w-4" />
+                Meta en {distanciaSeleccionada} m
+              </h2>
+            </div>
 
             {!meta && !editandoMeta && (
-              <button onClick={() => setEditandoMeta(true)} className="btn-secondary w-full text-sm">
-                Definir meta
+              <button
+                onClick={() => {
+                  setMetaTexto('5.00');
+                  setEditandoMeta(true);
+                }}
+                className="btn-secondary w-full text-sm"
+              >
+                Definir meta para {distanciaSeleccionada}m
               </button>
             )}
 
@@ -306,19 +326,19 @@ export default function DashboardCorredor({ corredor }: Props) {
               <form onSubmit={handleGuardarMeta} className="space-y-2">
                 {errorMeta && <p className="text-xs text-destructive">{errorMeta}</p>}
                 <label className="block text-xs text-muted-foreground" htmlFor="meta-segundos">
-                  Ritmo objetivo por cada 10m lanzados (segundos)
+                  Tiempo objetivo para {distanciaSeleccionada}m (segundos):
                 </label>
                 <div className="flex gap-2">
                   <input
                     id="meta-segundos"
                     type="number"
                     step="0.01"
-                    min="0.01"
+                    min="0.1"
                     value={metaTexto}
                     onChange={(e) => setMetaTexto(e.target.value)}
-                    placeholder="Ej. 0.95"
+                    placeholder="Ej. 5.00"
                     autoFocus
-                    className="input"
+                    className="input flex-1"
                     required
                   />
                   <button type="submit" disabled={guardandoMeta} className="btn-primary px-4 text-sm">
@@ -328,43 +348,46 @@ export default function DashboardCorredor({ corredor }: Props) {
               </form>
             )}
 
-            {meta && !editandoMeta && ritmoGlobal && (
+            {meta && !editandoMeta && tiempoObjetivoMs && stats && (
               <div className="space-y-2">
                 {metaLograda ? (
-                  <div className="flex items-center gap-2 text-sm font-medium text-primary">
-                    <IconoCheck className="h-5 w-5 text-accent" />
-                    ¡Meta lograda!
+                  <div className="flex items-center gap-2 text-sm font-bold text-emerald-600 bg-emerald-500/10 border border-emerald-500/20 p-2 rounded-lg">
+                    <IconoCheck className="h-5 w-5 text-emerald-600 shrink-0" />
+                    <span>¡Meta lograda en {distanciaSeleccionada}m! 🎉</span>
                   </div>
                 ) : (
-                  <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
-                    <div
-                      className="h-full rounded-full bg-accent transition-all duration-300"
-                      style={{ width: `${progreso}%` }}
-                    />
+                  <div className="space-y-1">
+                    <div className="flex justify-between text-xs text-muted-foreground font-medium">
+                      <span>Progreso hacia la meta</span>
+                      <span>Faltan {faltanSegundos.toFixed(2)}s</span>
+                    </div>
+                    <div className="h-2 w-full overflow-hidden rounded-full bg-surface">
+                      <div
+                        className="h-full rounded-full bg-primary transition-all duration-300"
+                        style={{ width: `${porcentajeProgreso}%` }}
+                      />
+                    </div>
                   </div>
                 )}
-                <p className="text-sm text-muted-foreground">
-                  Mejor ritmo:{' '}
-                  <span className="font-heading font-semibold tabular-nums text-primary">
-                    {formatearRitmo(ritmoGlobal.mejor)}
-                  </span>{' '}
-                  — Meta:{' '}
-                  <span className="font-heading font-semibold tabular-nums text-primary">
-                    {formatearRitmo(meta.ritmoObjetivoMsPor10m)}
-                  </span>
-                </p>
+
+                <div className="text-xs text-muted-foreground pt-1">
+                  Mejor tiempo: <strong className="font-heading text-sm text-foreground">{formatearTiempo(stats.mejorMs)}</strong>
+                  {' '}— Meta: <strong className="font-heading text-sm text-primary">{formatearTiempo(tiempoObjetivoMs)}</strong>
+                </div>
+
                 <button
                   onClick={() => {
-                    setMetaTexto((meta.ritmoObjetivoMsPor10m / 1000).toString());
+                    setMetaTexto((tiempoObjetivoMs / 1000).toFixed(2));
                     setEditandoMeta(true);
                   }}
-                  className="btn-ghost text-xs"
+                  className="btn-ghost text-xs -ml-2"
                 >
                   Cambiar meta
                 </button>
               </div>
             )}
           </div>
+
         </div>
       </div>
 
