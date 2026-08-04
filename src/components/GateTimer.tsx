@@ -70,39 +70,40 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
 
     let ultimoPico = 0;
     function handleMotion(e: DeviceMotionEvent) {
-      const acc = e.accelerationIncludingGravity || e.acceleration;
-      if (!acc) return;
-      const x = acc.x ?? 0;
-      const y = acc.y ?? 0;
-      const z = acc.z ?? 0;
-      const magnitud = Math.sqrt(x * x + y * y + z * z);
+      // 1. Evaluar Aceleración Dinámica Pura (iOS iPhone 15 sin gravedad)
+      let magDinamica = 0;
+      if (e.acceleration && (e.acceleration.x !== null || e.acceleration.y !== null)) {
+        const ax = e.acceleration.x ?? 0;
+        const ay = e.acceleration.y ?? 0;
+        const az = e.acceleration.z ?? 0;
+        magDinamica = Math.sqrt(ax * ax + ay * ay + az * az);
+      }
 
-      // Esperar 1.5s iniciales para ignorar la arrancada del partidor
+      // 2. Evaluar Aceleración con Gravedad (Android / fallback)
+      let magConGravedad = 0;
+      if (e.accelerationIncludingGravity) {
+        const gx = e.accelerationIncludingGravity.x ?? 0;
+        const gy = e.accelerationIncludingGravity.y ?? 0;
+        const gz = e.accelerationIncludingGravity.z ?? 0;
+        magConGravedad = Math.sqrt(gx * gx + gy * gy + gz * gz);
+      }
+
+      // Ignorar los primeros 1.5s iniciales (potencia de salida del gate)
       const tiempoCorrido = performance.now() - inicioRef.current;
       if (tiempoCorrido < 1500) return;
 
-      // Detectar frenado o desaceleración brusca (magnitud > 18.5 m/s^2)
-      if (magnitud > 18.5 && tiempoCorrido > ultimoPico + 1000) {
+      // Umbrales adaptativos de frenado tras la meta:
+      // - Desaceleración dinámica pura (iOS iPhone 15): > 11.5 m/s^2
+      // - Fuerza total con gravedad (Android): > 17.0 m/s^2
+      const esDesaceleracionMeta = magDinamica > 11.5 || magConGravedad > 17.0;
+
+      if (esDesaceleracionMeta && tiempoCorrido > ultimoPico + 1000) {
         ultimoPico = tiempoCorrido;
         detener();
       }
     }
 
-    if (typeof (DeviceMotionEvent as any)?.requestPermission === 'function') {
-      (DeviceMotionEvent as any)
-        .requestPermission()
-        .then((res: string) => {
-          if (res === 'granted') {
-            window.addEventListener('devicemotion', handleMotion);
-          }
-        })
-        .catch(() => {
-          window.addEventListener('devicemotion', handleMotion);
-        });
-    } else {
-      window.addEventListener('devicemotion', handleMotion);
-    }
-
+    window.addEventListener('devicemotion', handleMotion);
     return () => {
       window.removeEventListener('devicemotion', handleMotion);
     };
@@ -168,7 +169,22 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     }
   }
 
-  function iniciarPrebucleBolsillo() {
+  async function iniciarPrebucleBolsillo() {
+    setError(null);
+
+    // SOLICITUD DIRECTA DE PERMISO SINCRO CON EL CLICK DEL USUARIO EN iOS (iPhone 15)
+    if (typeof (DeviceMotionEvent as any)?.requestPermission === 'function') {
+      try {
+        const respuesta = await (DeviceMotionEvent as any).requestPermission();
+        if (respuesta !== 'granted') {
+          setError('Se requiere permiso del Acelerómetro en tu iPhone para medir en Modo Solo.');
+          return;
+        }
+      } catch (err) {
+        console.warn('Permiso del acelerómetro rechazado o no soportado:', err);
+      }
+    }
+
     setEstado('preparando_bolsillo');
     setConteoBolsillo(10);
     let faltan = 10;
@@ -200,7 +216,24 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     setElapsedMs(final);
     setEstado('detenido');
 
-    // Vibración en el bolsillo para avisar que el tiempo se congeló
+    // 1. Sonido Beep metálico de confirmación en el bolsillo (Especialmente para iPhone 15)
+    try {
+      const AudioCtxCtor = window.AudioContext ?? (window as any).webkitAudioContext;
+      const ctx = audioCtxRef.current || new AudioCtxCtor();
+      if (ctx.state === 'suspended') ctx.resume();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, ctx.currentTime);
+      gain.gain.setValueAtTime(0.5, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.35);
+    } catch (_) {}
+
+    // 2. Vibración en el bolsillo (Android)
     if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
       try {
         navigator.vibrate([300, 100, 300]);
