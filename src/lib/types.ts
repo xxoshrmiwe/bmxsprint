@@ -13,6 +13,7 @@ export interface Sesion {
   fecha: number;
   distanciaMetros: number;
   calentamientoRealizado: boolean;
+  modoMedicion?: 'asistido' | 'acelerometro';
   notas?: string;
 }
 

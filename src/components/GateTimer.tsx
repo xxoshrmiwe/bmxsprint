@@ -10,7 +10,7 @@ interface Props {
   onFinalizarSesion: (intentos: Intento[]) => void;
 }
 
-type Estado = 'listo' | 'reproduciendo' | 'corriendo' | 'detenido';
+type Estado = 'listo' | 'preparando_bolsillo' | 'reproduciendo' | 'corriendo' | 'detenido';
 
 // El cronómetro arranca este tanto antes de que el audio termine de sonar,
 // para compensar la cola de silencio/reverb que queda después del "drop" real.
@@ -42,11 +42,15 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   const [error, setError] = useState<string | null>(null);
   const [intentosSesion, setIntentosSesion] = useState<Intento[]>([]);
   const [guardando, setGuardando] = useState(false);
+  const [conteoBolsillo, setConteoBolsillo] = useState(10);
+
+  const esModoSolo = sesion.modoMedicion === 'acelerometro';
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const inicioRef = useRef<number>(0);
   const rafRef = useRef<number | null>(null);
   const anticipoRef = useRef<number | null>(null);
+  const bolsilloTimerRef = useRef<number | null>(null);
   const iniciadoRef = useRef(false);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const gainNodeRef = useRef<GainNode | null>(null);
@@ -55,9 +59,54 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (anticipoRef.current) clearTimeout(anticipoRef.current);
+      if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
       audioCtxRef.current?.close();
     };
   }, []);
+
+  // Monitoreo de Acelerómetro para Modo Solo (Bolsillo)
+  useEffect(() => {
+    if (estado !== 'corriendo' || !esModoSolo) return;
+
+    let ultimoPico = 0;
+    function handleMotion(e: DeviceMotionEvent) {
+      const acc = e.accelerationIncludingGravity || e.acceleration;
+      if (!acc) return;
+      const x = acc.x ?? 0;
+      const y = acc.y ?? 0;
+      const z = acc.z ?? 0;
+      const magnitud = Math.sqrt(x * x + y * y + z * z);
+
+      // Esperar 1.5s iniciales para ignorar la arrancada del partidor
+      const tiempoCorrido = performance.now() - inicioRef.current;
+      if (tiempoCorrido < 1500) return;
+
+      // Detectar frenado o desaceleración brusca (magnitud > 18.5 m/s^2)
+      if (magnitud > 18.5 && tiempoCorrido > ultimoPico + 1000) {
+        ultimoPico = tiempoCorrido;
+        detener();
+      }
+    }
+
+    if (typeof (DeviceMotionEvent as any)?.requestPermission === 'function') {
+      (DeviceMotionEvent as any)
+        .requestPermission()
+        .then((res: string) => {
+          if (res === 'granted') {
+            window.addEventListener('devicemotion', handleMotion);
+          }
+        })
+        .catch(() => {
+          window.addEventListener('devicemotion', handleMotion);
+        });
+    } else {
+      window.addEventListener('devicemotion', handleMotion);
+    }
+
+    return () => {
+      window.removeEventListener('devicemotion', handleMotion);
+    };
+  }, [estado, esModoSolo]);
 
   function asegurarGananciaAudio() {
     const audio = audioRef.current;
@@ -119,6 +168,28 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     }
   }
 
+  function iniciarPrebucleBolsillo() {
+    setEstado('preparando_bolsillo');
+    setConteoBolsillo(10);
+    let faltan = 10;
+    if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+
+    bolsilloTimerRef.current = window.setInterval(() => {
+      faltan -= 1;
+      setConteoBolsillo(faltan);
+      if (faltan <= 0) {
+        if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+        reproducirSalida();
+      }
+    }, 1000);
+  }
+
+  function cancelarPrebucleBolsillo() {
+    if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+    setEstado('listo');
+    setConteoBolsillo(10);
+  }
+
   function handleAudioEnded() {
     iniciarCronometro();
   }
@@ -128,7 +199,15 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     const final = performance.now() - inicioRef.current;
     setElapsedMs(final);
     setEstado('detenido');
+
+    // Vibración en el bolsillo para avisar que el tiempo se congeló
+    if (typeof navigator !== 'undefined' && 'vibrate' in navigator) {
+      try {
+        navigator.vibrate([300, 100, 300]);
+      } catch (_) {}
+    }
   }
+
 
   async function guardarYRepetir() {
     if (!clip) return;
@@ -194,17 +273,38 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
           {formatearTiempo(elapsedMs)}
         </span>
         <p className="mt-2 text-sm text-muted-foreground">
-          {estado === 'listo' && 'Listo para arrancar'}
+          {estado === 'listo' && (esModoSolo ? '📱 Modo Solo (Bolsillo)' : 'Listo para arrancar')}
+          {estado === 'preparando_bolsillo' && '⌛ Guardando celular...'}
           {estado === 'reproduciendo' && 'Reproduciendo salida...'}
-          {estado === 'corriendo' && '¡Corriendo!'}
+          {estado === 'corriendo' && (esModoSolo ? '📱 Corriendo (Auto-frenado activo)' : '¡Corriendo!')}
           {estado === 'detenido' && (esTiempoDudoso ? '⚠️ ¿Prueba o salida en falso?' : 'Detenido')}
         </p>
       </div>
 
       {estado === 'listo' && (
-        <button onClick={reproducirSalida} className="btn-primary w-full py-4 text-lg">
-          Reproducir salida
+        <button
+          onClick={esModoSolo ? iniciarPrebucleBolsillo : reproducirSalida}
+          className="btn-primary w-full py-4 text-lg font-bold shadow-lg"
+        >
+          {esModoSolo ? '📱 Guardar en bolsillo e Iniciar (10s)' : 'Reproducir salida'}
         </button>
+      )}
+
+      {estado === 'preparando_bolsillo' && (
+        <div className="card py-8 border-amber-500/40 bg-amber-500/10 text-center space-y-3 shadow-md">
+          <div className="text-xs font-bold uppercase tracking-wider text-amber-600">
+            📱 Modo Solo — Tiempo para guardar el celular
+          </div>
+          <div className="font-heading text-6xl font-extrabold text-foreground tabular-nums animate-pulse">
+            {conteoBolsillo} s
+          </div>
+          <p className="text-xs text-muted-foreground max-w-xs mx-auto">
+            Meté el celular al bolsillo del jersey/pantalón y acomodate en el partidor. El audio arrancará automáticamente.
+          </p>
+          <button onClick={cancelarPrebucleBolsillo} className="btn-ghost text-xs text-destructive font-bold">
+            Cancelar
+          </button>
+        </div>
       )}
 
       {estado === 'reproduciendo' && (
@@ -214,12 +314,19 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       )}
 
       {estado === 'corriendo' && (
-        <button
-          onClick={detener}
-          className="w-full cursor-pointer rounded-lg bg-destructive px-4 py-6 text-2xl font-bold text-destructive-foreground shadow-lg transition-transform duration-150 hover:scale-[1.02] active:scale-95"
-        >
-          DETENER
-        </button>
+        <div className="space-y-2">
+          {esModoSolo && (
+            <p className="text-xs font-medium text-amber-500 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
+              📱 <strong>Acelerómetro activo en bolsillo:</strong> Pedaleá los {sesion.distanciaMetros}m. Al frenar, el reloj se congelará y el celular vibrará.
+            </p>
+          )}
+          <button
+            onClick={detener}
+            className="w-full cursor-pointer rounded-lg bg-destructive px-4 py-6 text-2xl font-bold text-destructive-foreground shadow-lg transition-transform duration-150 hover:scale-[1.02] active:scale-95"
+          >
+            DETENER {esModoSolo ? 'MANUAL' : ''}
+          </button>
+        </div>
       )}
 
       {estado === 'detenido' && (

@@ -5,6 +5,7 @@ export async function crearSesion(datos: {
   corredorId: string;
   distanciaMetros: number;
   calentamientoRealizado: boolean;
+  modoMedicion?: 'asistido' | 'acelerometro';
   notas?: string;
 }): Promise<Sesion> {
   const { data, error } = await supabase
@@ -26,6 +27,7 @@ export async function crearSesion(datos: {
     fecha: new Date(data.fecha).getTime(),
     distanciaMetros: data.distancia_metros,
     calentamientoRealizado: data.calentamiento_realizado,
+    modoMedicion: datos.modoMedicion ?? 'asistido',
     notas: data.notas ?? undefined
   };
 }

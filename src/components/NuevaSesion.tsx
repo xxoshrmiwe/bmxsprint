@@ -12,6 +12,7 @@ const DISTANCIAS_SUGERIDAS = [10, 20, 30, 50];
 
 export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Props) {
   const [distancia, setDistancia] = useState<number>(20);
+  const [modoMedicion, setModoMedicion] = useState<'asistido' | 'acelerometro'>('asistido');
   const [calentamiento, setCalentamiento] = useState(true);
   const [notas, setNotas] = useState('');
   const [guardando, setGuardando] = useState(false);
@@ -25,6 +26,7 @@ export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Prop
         corredorId: corredor.id,
         distanciaMetros: distancia,
         calentamientoRealizado: calentamiento,
+        modoMedicion,
         notas: notas.trim() || undefined
       });
       onSesionCreada(sesion);
@@ -41,9 +43,50 @@ export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Prop
 
       <h1 className="text-2xl font-bold text-foreground">Nuevo entrenamiento</h1>
 
-      <form onSubmit={handleSubmit} className="card space-y-4">
+      <form onSubmit={handleSubmit} className="card space-y-5">
+        {/* MODO DE MEDICIÓN */}
+        <div className="space-y-2">
+          <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">
+            Modo de Entrenamiento
+          </label>
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setModoMedicion('asistido')}
+              className={`cursor-pointer rounded-xl border p-3 text-left transition-all ${
+                modoMedicion === 'asistido'
+                  ? 'border-primary bg-primary/10 font-bold text-primary shadow-sm'
+                  : 'border-border bg-white text-muted-foreground hover:bg-surface'
+              }`}
+            >
+              <div className="text-base mb-0.5">👥 Asistido</div>
+              <div className="text-[11px] font-normal leading-tight">
+                Alguien frena el tiempo manualmente en la meta.
+              </div>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setModoMedicion('acelerometro')}
+              className={`cursor-pointer rounded-xl border p-3 text-left transition-all ${
+                modoMedicion === 'acelerometro'
+                  ? 'border-primary bg-primary/10 font-bold text-primary shadow-sm'
+                  : 'border-border bg-white text-muted-foreground hover:bg-surface'
+              }`}
+            >
+              <div className="text-base mb-0.5">📱 Solo (Bolsillo)</div>
+              <div className="text-[11px] font-normal leading-tight">
+                Acelerómetro auto-detecta frenado y vibra.
+              </div>
+            </button>
+          </div>
+        </div>
+
+        {/* DISTANCIA */}
         <div>
-          <label className="mb-1 block text-sm text-muted-foreground">Distancia del sprint (metros)</label>
+          <label className="mb-1 block text-sm font-semibold text-muted-foreground">
+            Distancia del sprint (metros)
+          </label>
           <div className="mb-2 flex flex-wrap gap-2">
             {DISTANCIAS_SUGERIDAS.map((d) => (
               <button
@@ -70,7 +113,7 @@ export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Prop
           />
         </div>
 
-        <label className="flex cursor-pointer items-center gap-2 text-foreground">
+        <label className="flex cursor-pointer items-center gap-2 text-foreground text-sm font-medium">
           <input
             type="checkbox"
             checked={calentamiento}
@@ -81,7 +124,7 @@ export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Prop
         </label>
 
         <div>
-          <label className="mb-1 block text-sm text-muted-foreground">Notas (opcional)</label>
+          <label className="mb-1 block text-sm font-semibold text-muted-foreground">Notas (opcional)</label>
           <textarea
             value={notas}
             onChange={(e) => setNotas(e.target.value)}
@@ -91,7 +134,7 @@ export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Prop
           />
         </div>
 
-        <button type="submit" disabled={guardando} className="btn-primary w-full">
+        <button type="submit" disabled={guardando} className="btn-primary w-full py-3.5 text-base font-bold">
           {guardando ? 'Creando...' : calentamiento ? 'Continuar a calentamiento' : 'Ir al gate'}
         </button>
       </form>
