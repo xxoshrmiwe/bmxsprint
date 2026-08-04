@@ -14,7 +14,7 @@ const CARACTERISTICAS = [
 
 export default function Landing({ onIniciar }: Props) {
   return (
-    <div className="mx-auto max-w-md space-y-8 p-6 text-center sm:max-w-lg">
+    <div className="mx-auto max-w-md space-y-5 p-4 text-center sm:max-w-lg sm:space-y-8 sm:p-6">
       <div className="space-y-2">
         <div className="flex items-center justify-center gap-3">
           <img src="/logo-gateright-256.png" alt="GATERIGHT BMX" className="h-12 w-12 shrink-0" width={256} height={256} />
