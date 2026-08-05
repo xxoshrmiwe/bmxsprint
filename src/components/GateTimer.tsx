@@ -248,6 +248,8 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       const audio = audioRef.current;
       if (!audio) return;
 
+      audio.muted = false;
+      audio.currentTime = 0;
       audio.src = elegido.url;
       audio.load();
       asegurarGananciaAudio();
@@ -316,11 +318,15 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       if (audioCtxRef.current && audioCtxRef.current.state === 'suspended') {
         audioCtxRef.current.resume().catch(() => {});
       }
-      // Pequeña reproducción/pausa en el click para desbloquear el canal de audio de iOS
+      // Silenciar temporalmente durante el toque para desbloquear el canal de audio de iOS sin emitir sonido a t=0s
+      audio.muted = true;
       audio.play().then(() => {
         audio.pause();
         audio.currentTime = 0;
-      }).catch(() => {});
+        audio.muted = false;
+      }).catch(() => {
+        audio.muted = false;
+      });
     }
 
     setEstado('preparando_bolsillo');
@@ -340,6 +346,12 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
 
   function cancelarPrebucleBolsillo() {
     if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+    if (anticipoRef.current) clearTimeout(anticipoRef.current);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+      audioRef.current.muted = false;
+    }
     setEstado('listo');
     setConteoBolsillo(10);
   }
@@ -352,6 +364,12 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
 
   function detener() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    if (anticipoRef.current) clearTimeout(anticipoRef.current);
+    if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     const final = performance.now() - inicioRef.current;
     setElapsedMs(final);
     setEstado('detenido');
@@ -404,6 +422,12 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     if (!clip) return;
     setGuardando(true);
     try {
+      if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+      if (anticipoRef.current) clearTimeout(anticipoRef.current);
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current.currentTime = 0;
+      }
       const intento = await crearIntento({
         sesionId: sesion.id,
         corredorId: sesion.corredorId,
@@ -423,6 +447,12 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   }
 
   function descartarYRepetir() {
+    if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+    if (anticipoRef.current) clearTimeout(anticipoRef.current);
+    if (audioRef.current) {
+      audioRef.current.pause();
+      audioRef.current.currentTime = 0;
+    }
     setEstado('listo');
     setClip(null);
     setElapsedMs(0);
