@@ -6,10 +6,11 @@ interface Props {
   telemetria: PuntoTelemetria[];
   tiempoTotalMs: number;
   numeroIntento?: number;
+  telemetriaFantasma?: PuntoTelemetria[];
   onCerrar: () => void;
 }
 
-export default function GraficaSprint({ telemetria, tiempoTotalMs, numeroIntento, onCerrar }: Props) {
+export default function GraficaSprint({ telemetria, tiempoTotalMs, numeroIntento, telemetriaFantasma, onCerrar }: Props) {
   if (!telemetria || telemetria.length < 2) {
     return (
       <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-xs p-4">
@@ -60,12 +61,15 @@ export default function GraficaSprint({ telemetria, tiempoTotalMs, numeroIntento
   const height = 260;
   const padding = { top: 30, right: 30, bottom: 40, left: 45 };
 
+  const fantasmaMaxT = telemetriaFantasma && telemetriaFantasma.length > 0 ? telemetriaFantasma[telemetriaFantasma.length - 1].t : 0;
+  const fantasmaMaxAcel = telemetriaFantasma && telemetriaFantasma.length > 0 ? Math.max(...telemetriaFantasma.map((p) => p.a)) : 0;
+
   const minT = 0;
-  const maxT = Math.max(tiempoTotalMs, telemetria[telemetria.length - 1].t);
+  const maxT = Math.max(tiempoTotalMs, telemetria[telemetria.length - 1].t, fantasmaMaxT);
   const rangeT = maxT - minT || 1;
 
   const yMin = 0;
-  const yMax = Math.max(25, Math.ceil(maxAcel * 1.15));
+  const yMax = Math.max(25, Math.ceil(Math.max(maxAcel, fantasmaMaxAcel) * 1.15));
   const rangeY = yMax - yMin;
 
   // Convertir puntos a coordenadas SVG
@@ -81,6 +85,20 @@ export default function GraficaSprint({ telemetria, tiempoTotalMs, numeroIntento
   );
 
   const areaD = `${pathD} L ${points[points.length - 1].x},${height - padding.bottom} L ${points[0].x},${height - padding.bottom} Z`;
+
+  // Coordenadas para la curva fantasma (PR Récord Personal)
+  let ghostPathD = '';
+  if (telemetriaFantasma && telemetriaFantasma.length > 1) {
+    const ghostPoints = telemetriaFantasma.map((p) => {
+      const x = padding.left + ((p.t - minT) / rangeT) * (width - padding.left - padding.right);
+      const y = height - padding.bottom - ((p.a - yMin) / rangeY) * (height - padding.top - padding.bottom);
+      return { x, y };
+    });
+    ghostPathD = ghostPoints.reduce(
+      (acc, p, idx) => (idx === 0 ? `M ${p.x},${p.y}` : `${acc} L ${p.x},${p.y}`),
+      ''
+    );
+  }
 
   // Coordenada del pico máximo
   const maxX = padding.left + ((maxPunto.t - minT) / rangeT) * (width - padding.left - padding.right);
@@ -176,10 +194,15 @@ export default function GraficaSprint({ telemetria, tiempoTotalMs, numeroIntento
               );
             })}
 
-            {/* Área sombreada bajo la curva */}
+            {/* Curva Fantasma de Récord Personal (si existe) */}
+            {ghostPathD && (
+              <path d={ghostPathD} fill="none" stroke="#a855f7" strokeWidth="2.5" strokeDasharray="5 5" opacity="0.85" strokeLinecap="round" strokeLinejoin="round" />
+            )}
+
+            {/* Área sombreada bajo la curva actual */}
             <path d={areaD} fill="url(#gradientArea)" />
 
-            {/* Línea principal del gráfico */}
+            {/* Línea principal del gráfico actual */}
             <path d={pathD} fill="none" stroke="url(#gradientLine)" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
 
             {/* Marcador del punto máximo */}
@@ -192,10 +215,15 @@ export default function GraficaSprint({ telemetria, tiempoTotalMs, numeroIntento
 
         {/* Leyenda y Explicación */}
         <div className="mt-3 flex items-center justify-between text-xs text-muted-foreground px-1">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-3.5">
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-emerald-400 inline-block"></span> Salida</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-amber-400 inline-block"></span> Pedaleo</span>
             <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded-full bg-rose-400 inline-block"></span> Frenado</span>
+            {ghostPathD && (
+              <span className="flex items-center gap-1.5 text-purple-400 font-semibold">
+                <span className="w-3 border-b-2 border-dashed border-purple-400 inline-block"></span> 🟣 Récord (Fantasma)
+              </span>
+            )}
           </div>
           <button
             onClick={onCerrar}

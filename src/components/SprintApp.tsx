@@ -177,6 +177,7 @@ export default function SprintApp() {
         return (
           <GateTimer
             sesion={vista.sesion}
+            corredor={vista.corredor}
             onFinalizarSesion={() => setVista({ tipo: 'historial', corredor: vista.corredor })}
           />
         );

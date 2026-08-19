@@ -1,14 +1,16 @@
 import { useEffect, useRef, useState } from 'react';
-import type { Sesion, Intento, PuntoTelemetria } from '../lib/types';
+import type { Sesion, Intento, PuntoTelemetria, Corredor } from '../lib/types';
 import { elegirClipAleatorio, type ClipGate } from '../lib/audio';
-import { crearIntento, eliminarIntento } from '../lib/db';
+import { crearIntento, eliminarIntento, listarIntentosPorCorredor } from '../lib/db';
 import { formatearTiempo } from '../lib/tiempo';
 import { IconoAlerta, IconoBasura } from './Icono';
 import GraficaSprint from './GraficaSprint';
+import TarjetasResumen from './TarjetasResumen';
 import { guardarRunCrudo, exportarRunCSV, type SampleCrudo, type GpsSampleCrudo, type RunCrudo } from '../lib/loggerDb';
 
 interface Props {
   sesion: Sesion;
+  corredor?: Corredor;
   onFinalizarSesion: (intentos: Intento[]) => void;
 }
 
@@ -37,7 +39,7 @@ function LuzSemaforo({ color, activa }: { color: 'red' | 'yellow' | 'green'; act
   );
 }
 
-export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
+export default function GateTimer({ sesion, corredor, onFinalizarSesion }: Props) {
   const [estado, setEstado] = useState<Estado>('listo');
   const [clip, setClip] = useState<ClipGate | null>(null);
   const [elapsedMs, setElapsedMs] = useState(0);
@@ -46,8 +48,24 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   const [guardando, setGuardando] = useState(false);
   const [conteoBolsillo, setConteoBolsillo] = useState(10);
   const [graficaModal, setGraficaModal] = useState<{ telemetria: PuntoTelemetria[]; tiempoMs: number; numero?: number } | null>(null);
+  const [tarjetaModal, setTarjetaModal] = useState<{ telemetria?: PuntoTelemetria[]; tiempoMs: number; numero?: number } | null>(null);
+  const [telemetriaFantasma, setTelemetriaFantasma] = useState<PuntoTelemetria[] | undefined>(undefined);
 
   const esModoSolo = sesion.modoMedicion === 'acelerometro';
+
+  // Cargar telemetría del mejor sprint histórico (PR) para la curva fantasma
+  useEffect(() => {
+    if (!sesion.corredorId) return;
+    listarIntentosPorCorredor(sesion.corredorId).then((todos) => {
+      const conTelemetria = todos.filter((i) => i.telemetria && i.telemetria.length > 2);
+      if (conTelemetria.length === 0) return;
+      // Encontrar el intento con mejor tiempo (PR)
+      const mejor = conTelemetria.reduce((prev, curr) => (curr.tiempoTotalMs < prev.tiempoTotalMs ? curr : prev));
+      if (mejor && mejor.telemetria) {
+        setTelemetriaFantasma(mejor.telemetria);
+      }
+    }).catch(() => {});
+  }, [sesion.corredorId]);
 
   const estadoRef = useRef<Estado>(estado);
   useEffect(() => {
@@ -650,24 +668,38 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
           )}
 
           {telemetriaUltimoSprint.length > 0 && (
-            <button
-              onClick={() =>
-                setGraficaModal({
-                  telemetria: [...telemetriaUltimoSprint],
-                  tiempoMs: elapsedMs,
-                  numero: intentosSesion.length + 1
-                })
-              }
-              className="w-full cursor-pointer rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 px-4 text-xs font-extrabold text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shadow-xs"
-            >
-              📊 Ver gráfica de telemetría de este sprint
-            </button>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() =>
+                  setGraficaModal({
+                    telemetria: [...telemetriaUltimoSprint],
+                    tiempoMs: elapsedMs,
+                    numero: intentosSesion.length + 1
+                  })
+                }
+                className="cursor-pointer rounded-xl border border-emerald-500/30 bg-emerald-500/10 py-2.5 px-3 text-xs font-extrabold text-emerald-400 hover:bg-emerald-500 hover:text-white transition-all shadow-xs"
+              >
+                📊 Ver gráfica (PR Fantasma)
+              </button>
+              <button
+                onClick={() =>
+                  setTarjetaModal({
+                    telemetria: [...telemetriaUltimoSprint],
+                    tiempoMs: elapsedMs,
+                    numero: intentosSesion.length + 1
+                  })
+                }
+                className="cursor-pointer rounded-xl border border-sky-500/30 bg-sky-500/10 py-2.5 px-3 text-xs font-extrabold text-sky-400 hover:bg-sky-500 hover:text-white transition-all shadow-xs"
+              >
+                📲 Compartir Ficha
+              </button>
+            </div>
           )}
 
           {ultimoRunCrudo && (
             <button
               onClick={() => exportarRunCSV(ultimoRunCrudo)}
-              className="w-full cursor-pointer rounded-xl border border-sky-500/30 bg-sky-500/10 py-2.5 px-4 text-xs font-extrabold text-sky-400 hover:bg-sky-500 hover:text-white transition-all shadow-xs"
+              className="w-full cursor-pointer rounded-xl border border-slate-700 bg-slate-800/40 py-2 px-4 text-[11px] font-bold text-slate-400 hover:bg-slate-700 hover:text-white transition-all"
             >
               📥 Exportar Telemetría Cruda (CSV)
             </button>
@@ -750,31 +782,46 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
                       )}
                     </div>
                     {i.telemetria && i.telemetria.length > 0 && (
-                      <button
-                        onClick={() =>
-                          setGraficaModal({
-                            telemetria: i.telemetria!,
-                            tiempoMs: i.tiempoTotalMs,
-                            numero: i.numero
-                          })
-                        }
-                        title="Ver gráfica de telemetría"
-                        className="cursor-pointer text-xs font-bold text-primary hover:underline"
-                      >
-                        📊 Gráfica
-                      </button>
+                      <>
+                        <button
+                          onClick={() =>
+                            setGraficaModal({
+                              telemetria: i.telemetria!,
+                              tiempoMs: i.tiempoTotalMs,
+                              numero: i.numero
+                            })
+                          }
+                          title="Ver gráfica de telemetría"
+                          className="cursor-pointer text-xs font-bold text-emerald-600 hover:underline"
+                        >
+                          📊 Gráfica
+                        </button>
+                        <button
+                          onClick={() =>
+                            setTarjetaModal({
+                              telemetria: i.telemetria!,
+                              tiempoMs: i.tiempoTotalMs,
+                              numero: i.numero
+                            })
+                          }
+                          title="Compartir tarjeta de sprint"
+                          className="cursor-pointer text-xs font-bold text-sky-600 hover:underline"
+                        >
+                          📲 Ficha
+                        </button>
+                      </>
                     )}
-                  <button
-                    onClick={() => handleBorrarIntentoGuardado(i.id)}
-                    title="Eliminar este intento de la sesión"
-                    className="cursor-pointer text-muted-foreground hover:text-destructive"
-                  >
-                    <IconoBasura className="h-4 w-4" />
-                  </button>
-                </div>
-              </li>
-            );
-          })}
+                    <button
+                      onClick={() => handleBorrarIntentoGuardado(i.id)}
+                      title="Eliminar este intento de la sesión"
+                      className="cursor-pointer text-muted-foreground hover:text-destructive"
+                    >
+                      <IconoBasura className="h-4 w-4" />
+                    </button>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         </div>
       )}
@@ -783,13 +830,26 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
         Finalizar sesión
       </button>
 
-      {/* Modal de Gráfica de Telemetría */}
+      {/* Modal de Gráfica de Telemetría (Con Récord Fantasma) */}
       {graficaModal && (
         <GraficaSprint
           telemetria={graficaModal.telemetria}
           tiempoTotalMs={graficaModal.tiempoMs}
           numeroIntento={graficaModal.numero}
+          telemetriaFantasma={telemetriaFantasma}
           onCerrar={() => setGraficaModal(null)}
+        />
+      )}
+
+      {/* Modal de Ficha Resumen Compartible */}
+      {tarjetaModal && (
+        <TarjetasResumen
+          nombreCorredor={corredor?.nombre || 'Corredor BMX'}
+          distanciaMetros={sesion.distanciaMetros}
+          tiempoTotalMs={tarjetaModal.tiempoMs}
+          numeroIntento={tarjetaModal.numero}
+          telemetria={tarjetaModal.telemetria}
+          onCerrar={() => setTarjetaModal(null)}
         />
       )}
     </div>
