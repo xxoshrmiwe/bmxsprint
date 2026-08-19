@@ -39,18 +39,29 @@ function LuzSemaforo({ color, activa }: { color: 'red' | 'yellow' | 'green'; act
   );
 }
 
-function anunciarTiempoPorVoz(tiempoTotalMs: number, esPR: boolean) {
+function anunciarTiempoPorVoz(tiempoTotalMs: number, mejorTiempoPrevioMs?: number) {
   if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
   try {
     window.speechSynthesis.cancel();
     const segs = (tiempoTotalMs / 1000).toFixed(2).replace('.', ' coma ');
     let texto = `${segs} segundos.`;
-    if (esPR) {
-      texto += ' ¡Nuevo récord personal!';
+
+    if (mejorTiempoPrevioMs && mejorTiempoPrevioMs > 1000) {
+      if (tiempoTotalMs < mejorTiempoPrevioMs) {
+        const difSeg = ((mejorTiempoPrevioMs - tiempoTotalMs) / 1000).toFixed(2).replace('.', ' coma ');
+        texto += ` ¡Nuevo récord personal! Mejoraste ${difSeg} segundos.`;
+      } else {
+        const difMs = tiempoTotalMs - mejorTiempoPrevioMs;
+        if (difMs < 800) {
+          const difSeg = (difMs / 1000).toFixed(2).replace('.', ' coma ');
+          texto += ` Estuviste a solo ${difSeg} segundos de tu récord personal.`;
+        }
+      }
     }
+
     const utterance = new SpeechSynthesisUtterance(texto);
     utterance.lang = 'es-ES';
-    utterance.rate = 1.05;
+    utterance.rate = 1.02;
     utterance.pitch = 1.0;
     window.speechSynthesis.speak(utterance);
   } catch (_) {}
@@ -524,8 +535,7 @@ export default function GateTimer({ sesion, corredor, onFinalizarSesion }: Props
     // 3. Lectura de Tiempo por Voz Sintetizada en Vivo (después del tono de 3s en el bolsillo)
     if (vozActivadaRef.current) {
       setTimeout(() => {
-        const esPR = mejorTiempoHistoricoMs > 0 ? final < mejorTiempoHistoricoMs : false;
-        anunciarTiempoPorVoz(final, esPR);
+        anunciarTiempoPorVoz(final, mejorTiempoHistoricoMs);
       }, 3100);
     }
   }
