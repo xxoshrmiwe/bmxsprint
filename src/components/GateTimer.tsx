@@ -195,12 +195,13 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       // Ignorar durante la ventana de gracia inicial de la arrancada
       if (tiempoCorrido < ventanaGraciaMs) return;
 
-      // El celular se considera "Totalmente Quieto" solo cuando la aceleración cae < 1.0 m/s^2 y la velocidad GPS es muy baja
-      const estaQuieto = nivelMovimiento < 1.0 && velocidadDoppler < 1.0;
+      // Se considera que el sprint terminó (frenado tras la meta) cuando la aceleración cae < 1.8 m/s^2 y la velocidad es baja
+      const estaQuieto = nivelMovimiento < 1.8 && velocidadDoppler < 1.2;
 
       if (movimientoRegistrado && estaQuieto) {
         lecturasQuietoConsecutivas++;
-        if (lecturasQuietoConsecutivas >= MUESTRAS_QUIETO_REQUERIDAS) {
+        // Con 15 muestras (~250ms a 300ms de desaceleración sostenida) se detiene de inmediato
+        if (lecturasQuietoConsecutivas >= 15) {
           detener();
         }
       } else {
@@ -398,7 +399,31 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       audioRef.current.currentTime = 0;
       audioRef.current.onloadedmetadata = null;
     }
-    const final = performance.now() - inicioRef.current;
+    let final = performance.now() - inicioRef.current;
+
+    // ALGORITMO DE CORTE DE PRECISIÓN (Elimina el delay/ruido de sacar el celular del bolsillo)
+    if (esModoSolo && telemetriaRef.current.length > 5) {
+      // Buscar el último instante de pedaleo/aceleración activa (a >= 3.0 m/s²)
+      let ultimoIndiceActivo = -1;
+      for (let i = telemetriaRef.current.length - 1; i >= 0; i--) {
+        if (telemetriaRef.current[i].a >= 3.0) {
+          ultimoIndiceActivo = i;
+          break;
+        }
+      }
+
+      if (ultimoIndiceActivo !== -1 && ultimoIndiceActivo < telemetriaRef.current.length - 1) {
+        // Añadir 5 muestras (~200ms) para cubrir la inercia completa de frenado en la meta
+        const indiceCorte = Math.min(telemetriaRef.current.length - 1, ultimoIndiceActivo + 5);
+        const tCorte = telemetriaRef.current[indiceCorte].t;
+        if (tCorte > 1500 && tCorte < final) {
+          final = tCorte;
+          // Limpiar la cola de lecturas producidas al manipular el teléfono con la mano
+          telemetriaRef.current = telemetriaRef.current.slice(0, indiceCorte + 1);
+        }
+      }
+    }
+
     setElapsedMs(final);
     setEstado('detenido');
     setTelemetriaUltimoSprint([...telemetriaRef.current]);
