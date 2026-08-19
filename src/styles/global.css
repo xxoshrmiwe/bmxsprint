@@ -39,6 +39,9 @@
     overflow-x: hidden;
     touch-action: manipulation;
     -webkit-text-size-adjust: 100%;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
   }
 
   body {
@@ -47,7 +50,17 @@
     overflow-x: hidden;
     touch-action: manipulation;
     -webkit-overflow-scrolling: touch;
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    user-select: none;
     @apply bg-background text-foreground font-sans antialiased;
+  }
+
+  input,
+  textarea,
+  [contenteditable="true"] {
+    -webkit-user-select: text;
+    user-select: text;
   }
 
   .pwa-safe-area {

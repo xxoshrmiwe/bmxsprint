@@ -40,11 +40,35 @@ const { title = 'GATERIGHT BMX', noindex = false } = Astro.props;
       });
     </script>
   </head>
-  <body class="min-h-full bg-background pwa-safe-area">
-    <slot />
+  <body class="min-h-full bg-background pwa-safe-area flex flex-col justify-between">
+    <div class="flex-1">
+      <slot />
+    </div>
     <IdeaFlotante client:only="react" />
 
+    <footer class="py-4 text-center select-none">
+      <button
+        id="btn-version-pwa"
+        type="button"
+        title="Toca para verificar actualización de versión"
+        class="cursor-pointer rounded-full bg-slate-100 border border-slate-200/80 px-3 py-1 text-[11px] font-bold text-slate-500 hover:bg-slate-200 hover:text-slate-700 transition-all shadow-2xs active:scale-95"
+      >
+        v1.1.0 · GATERIGHT BMX <span class="opacity-65 font-normal">(Toca para actualizar)</span>
+      </button>
+    </footer>
+
     <script is:inline>
+      document.getElementById('btn-version-pwa')?.addEventListener('click', () => {
+        if ('serviceWorker' in navigator) {
+          navigator.serviceWorker.getRegistrations().then((regs) => {
+            for (let reg of regs) {
+              reg.update();
+            }
+          });
+        }
+        window.location.reload();
+      });
+
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
           navigator.serviceWorker.register('/sw.js').then((registration) => {

@@ -77,6 +77,10 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
   const [ultimoRunCrudo, setUltimoRunCrudo] = useState<RunCrudo | null>(null);
 
   useEffect(() => {
+    // Desenfocar cualquier elemento activo (inputs/teclados) para evitar que iOS dispare "Agitar para deshacer"
+    if (typeof document !== 'undefined' && document.activeElement instanceof HTMLElement) {
+      document.activeElement.blur();
+    }
     return () => {
       if (rafRef.current) cancelAnimationFrame(rafRef.current);
       if (anticipoRef.current) clearTimeout(anticipoRef.current);
