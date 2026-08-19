@@ -39,6 +39,23 @@ function LuzSemaforo({ color, activa }: { color: 'red' | 'yellow' | 'green'; act
   );
 }
 
+function anunciarTiempoPorVoz(tiempoTotalMs: number, esPR: boolean) {
+  if (typeof window === 'undefined' || !('speechSynthesis' in window)) return;
+  try {
+    window.speechSynthesis.cancel();
+    const segs = (tiempoTotalMs / 1000).toFixed(2).replace('.', ' coma ');
+    let texto = `${segs} segundos.`;
+    if (esPR) {
+      texto += ' ¡Nuevo récord personal!';
+    }
+    const utterance = new SpeechSynthesisUtterance(texto);
+    utterance.lang = 'es-ES';
+    utterance.rate = 1.05;
+    utterance.pitch = 1.0;
+    window.speechSynthesis.speak(utterance);
+  } catch (_) {}
+}
+
 export default function GateTimer({ sesion, corredor, onFinalizarSesion }: Props) {
   const [estado, setEstado] = useState<Estado>('listo');
   const [clip, setClip] = useState<ClipGate | null>(null);
@@ -50,19 +67,36 @@ export default function GateTimer({ sesion, corredor, onFinalizarSesion }: Props
   const [graficaModal, setGraficaModal] = useState<{ telemetria: PuntoTelemetria[]; tiempoMs: number; numero?: number } | null>(null);
   const [tarjetaModal, setTarjetaModal] = useState<{ telemetria?: PuntoTelemetria[]; tiempoMs: number; numero?: number } | null>(null);
   const [telemetriaFantasma, setTelemetriaFantasma] = useState<PuntoTelemetria[] | undefined>(undefined);
+  const [mejorTiempoHistoricoMs, setMejorTiempoHistoricoMs] = useState<number>(0);
+  const [vozActivada, setVozActivada] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('gateright_voz_activada') !== 'false';
+    }
+    return true;
+  });
+
+  const vozActivadaRef = useRef(vozActivada);
+  useEffect(() => {
+    vozActivadaRef.current = vozActivada;
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('gateright_voz_activada', String(vozActivada));
+    }
+  }, [vozActivada]);
 
   const esModoSolo = sesion.modoMedicion === 'acelerometro';
 
-  // Cargar telemetría del mejor sprint histórico (PR) para la curva fantasma
+  // Cargar telemetría del mejor sprint histórico (PR) para la curva fantasma y comparación por voz
   useEffect(() => {
     if (!sesion.corredorId) return;
     listarIntentosPorCorredor(sesion.corredorId).then((todos) => {
-      const conTelemetria = todos.filter((i) => i.telemetria && i.telemetria.length > 2);
-      if (conTelemetria.length === 0) return;
-      // Encontrar el intento con mejor tiempo (PR)
-      const mejor = conTelemetria.reduce((prev, curr) => (curr.tiempoTotalMs < prev.tiempoTotalMs ? curr : prev));
-      if (mejor && mejor.telemetria) {
-        setTelemetriaFantasma(mejor.telemetria);
+      const delMismaDistancia = todos.filter((i) => i.tiempoTotalMs > 1500);
+      if (delMismaDistancia.length === 0) return;
+      const mejor = delMismaDistancia.reduce((prev, curr) => (curr.tiempoTotalMs < prev.tiempoTotalMs ? curr : prev));
+      if (mejor) {
+        setMejorTiempoHistoricoMs(mejor.tiempoTotalMs);
+        if (mejor.telemetria && mejor.telemetria.length > 2) {
+          setTelemetriaFantasma(mejor.telemetria);
+        }
       }
     }).catch(() => {});
   }, [sesion.corredorId]);
@@ -486,6 +520,14 @@ export default function GateTimer({ sesion, corredor, onFinalizarSesion }: Props
         navigator.vibrate([1000, 200, 1000, 200, 1000]);
       } catch (_) {}
     }
+
+    // 3. Lectura de Tiempo por Voz Sintetizada en Vivo (después del tono de 3s en el bolsillo)
+    if (vozActivadaRef.current) {
+      setTimeout(() => {
+        const esPR = mejorTiempoHistoricoMs > 0 ? final < mejorTiempoHistoricoMs : false;
+        anunciarTiempoPorVoz(final, esPR);
+      }, 3100);
+    }
   }
 
 
@@ -598,6 +640,20 @@ export default function GateTimer({ sesion, corredor, onFinalizarSesion }: Props
             );
           })()
         )}
+        <div className="mt-3 flex justify-center">
+          <button
+            type="button"
+            onClick={() => setVozActivada(!vozActivada)}
+            title="Activar/desactivar locución de voz tras cada sprint"
+            className={`cursor-pointer inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-extrabold transition-all border shadow-2xs ${
+              vozActivada
+                ? 'border-emerald-500/30 bg-emerald-500/15 text-emerald-700 dark:text-emerald-400'
+                : 'border-slate-300 bg-slate-100 text-slate-400'
+            }`}
+          >
+            {vozActivada ? '🗣️ Voz de Entrenador (ON)' : '🔇 Voz de Entrenador (OFF)'}
+          </button>
+        </div>
         <p className="mt-2 text-sm text-muted-foreground">
           {estado === 'listo' && (esModoSolo ? '📱 Modo Solo (Bolsillo)' : 'Listo para arrancar')}
           {estado === 'preparando_bolsillo' && '⌛ Guardando celular...'}
@@ -694,15 +750,6 @@ export default function GateTimer({ sesion, corredor, onFinalizarSesion }: Props
                 📲 Compartir Ficha
               </button>
             </div>
-          )}
-
-          {ultimoRunCrudo && (
-            <button
-              onClick={() => exportarRunCSV(ultimoRunCrudo)}
-              className="w-full cursor-pointer rounded-xl border border-slate-700 bg-slate-800/40 py-2 px-4 text-[11px] font-bold text-slate-400 hover:bg-slate-700 hover:text-white transition-all"
-            >
-              📥 Exportar Telemetría Cruda (CSV)
-            </button>
           )}
 
           <div className="flex gap-3">
