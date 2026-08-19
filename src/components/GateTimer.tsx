@@ -49,6 +49,11 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
 
   const esModoSolo = sesion.modoMedicion === 'acelerometro';
 
+  const estadoRef = useRef<Estado>(estado);
+  useEffect(() => {
+    estadoRef.current = estado;
+  }, [estado]);
+
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const inicioRef = useRef<number>(0);
   const rafRef = useRef<number | null>(null);
@@ -125,8 +130,11 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     let movimientoRegistrado = false;
     let lecturasQuietoConsecutivas = 0;
 
-    // Muestras consecutivas de teléfono quieto requeridas (~300ms a 500ms de detención total)
-    const MUESTRAS_QUIETO_REQUERIDAS = 10;
+    // Muestras consecutivas de teléfono quieto requeridas (~500ms a 600ms de detención total)
+    const MUESTRAS_QUIETO_REQUERIDAS = 30;
+
+    // Ventana de gracia inicial adaptada a la distancia (mínimo 2.0s, hasta 3.0s)
+    const ventanaGraciaMs = Math.min(3000, Math.max(2000, sesion.distanciaMetros * 70));
 
     function handleMotion(e: DeviceMotionEvent) {
       // Registrar muestra cruda completa para el CSV (Paso 0)
@@ -176,15 +184,15 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       }
 
       // Confirmar que el atleta ya arrancó a pedalear / moverse
-      if (nivelMovimiento > 2.0 || velocidadDoppler > 1.5) {
+      if (nivelMovimiento > 2.5 || velocidadDoppler > 1.8) {
         movimientoRegistrado = true;
       }
 
-      // Ignorar durante el primer segundo inicial de arranque
-      if (tiempoCorrido < 1000) return;
+      // Ignorar durante la ventana de gracia inicial de la arrancada
+      if (tiempoCorrido < ventanaGraciaMs) return;
 
-      // El celular se considera "Totalmente Quieto" cuando el movimiento cae por debajo de 1.8 m/s^2 y la velocidad GPS es baja
-      const estaQuieto = nivelMovimiento < 1.8 && velocidadDoppler < 1.0;
+      // El celular se considera "Totalmente Quieto" solo cuando la aceleración cae < 1.0 m/s^2 y la velocidad GPS es muy baja
+      const estaQuieto = nivelMovimiento < 1.0 && velocidadDoppler < 1.0;
 
       if (movimientoRegistrado && estaQuieto) {
         lecturasQuietoConsecutivas++;
@@ -192,7 +200,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
           detener();
         }
       } else {
-        // Mientras esté en movimiento o pedaleando, reiniciar el contador de quieto
+        // Mientras esté en movimiento o pedaleando o tomando curvas, reiniciar el contador de quieto
         lecturasQuietoConsecutivas = 0;
       }
     }
@@ -225,8 +233,13 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
 
   function iniciarCronometro() {
     if (iniciadoRef.current) return;
+    // Solo permitir iniciar si venimos de reproduciendo o preparando_bolsillo
+    if (estadoRef.current !== 'reproduciendo' && estadoRef.current !== 'preparando_bolsillo') return;
     iniciadoRef.current = true;
-    if (anticipoRef.current) clearTimeout(anticipoRef.current);
+    if (anticipoRef.current) {
+      clearTimeout(anticipoRef.current);
+      anticipoRef.current = null;
+    }
     inicioRef.current = performance.now();
     telemetriaRef.current = [];
     muestrasCrudasRef.current = [];
@@ -351,24 +364,35 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
       audioRef.current.muted = false;
+      audioRef.current.onloadedmetadata = null;
     }
+    iniciadoRef.current = false;
     setEstado('listo');
     setConteoBolsillo(10);
   }
 
   function handleAudioEnded() {
-    iniciarCronometro();
+    if (estadoRef.current === 'reproduciendo') {
+      iniciarCronometro();
+    }
   }
 
   const [telemetriaUltimoSprint, setTelemetriaUltimoSprint] = useState<PuntoTelemetria[]>([]);
 
   function detener() {
     if (rafRef.current) cancelAnimationFrame(rafRef.current);
-    if (anticipoRef.current) clearTimeout(anticipoRef.current);
-    if (bolsilloTimerRef.current) clearInterval(bolsilloTimerRef.current);
+    if (anticipoRef.current) {
+      clearTimeout(anticipoRef.current);
+      anticipoRef.current = null;
+    }
+    if (bolsilloTimerRef.current) {
+      clearInterval(bolsilloTimerRef.current);
+      bolsilloTimerRef.current = null;
+    }
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current.onloadedmetadata = null;
     }
     const final = performance.now() - inicioRef.current;
     setElapsedMs(final);
@@ -427,7 +451,9 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       if (audioRef.current) {
         audioRef.current.pause();
         audioRef.current.currentTime = 0;
+        audioRef.current.onloadedmetadata = null;
       }
+      iniciadoRef.current = false;
       const intento = await crearIntento({
         sesionId: sesion.id,
         corredorId: sesion.corredorId,
@@ -452,7 +478,9 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
     if (audioRef.current) {
       audioRef.current.pause();
       audioRef.current.currentTime = 0;
+      audioRef.current.onloadedmetadata = null;
     }
+    iniciadoRef.current = false;
     setEstado('listo');
     setClip(null);
     setElapsedMs(0);
