@@ -607,7 +607,7 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
             {conteoBolsillo} s
           </div>
           <p className="text-xs text-muted-foreground max-w-xs mx-auto">
-            Meté el celular al bolsillo del jersey/pantalón y acomodate en el partidor. El audio arrancará automáticamente.
+            Guardá el celular en el bolsillo y acomodate en el partidor. <strong>Al cruzar la meta ({sesion.distanciaMetros}m), frená con firmeza</strong> para congelar el tiempo al instante.
           </p>
           <button onClick={cancelarPrebucleBolsillo} className="btn-ghost text-xs text-destructive font-bold">
             Cancelar
@@ -624,8 +624,8 @@ export default function GateTimer({ sesion, onFinalizarSesion }: Props) {
       {estado === 'corriendo' && (
         <div className="space-y-2">
           {esModoSolo && (
-            <p className="text-xs font-medium text-amber-500 bg-amber-500/10 p-2.5 rounded-lg border border-amber-500/20">
-              📱 <strong>Acelerómetro activo en bolsillo:</strong> Pedaleá los {sesion.distanciaMetros}m. Al frenar, el reloj se congelará y el celular vibrará.
+            <p className="text-xs font-medium text-amber-600 bg-amber-500/10 p-3 rounded-lg border border-amber-500/30 text-left">
+              📱 <strong>Modo Bolsillo Activo:</strong> Pedaleá a máxima velocidad los {sesion.distanciaMetros}m. <strong>Apenas cruces la meta, frená con firmeza</strong> para congelar el reloj de inmediato.
             </p>
           )}
           <button
