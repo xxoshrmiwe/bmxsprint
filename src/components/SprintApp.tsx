@@ -67,6 +67,11 @@ export default function SprintApp() {
   useEffect(() => {
     if (typeof window !== 'undefined') {
       setEsImpersonado(localStorage.getItem('admin_impersonating') === 'true');
+      const params = new URLSearchParams(window.location.search);
+      const codigoUnirse = params.get('unirse');
+      if (codigoUnirse) {
+        localStorage.setItem('bmx_codigo_unirse_pendiente', codigoUnirse.toUpperCase());
+      }
     }
     obtenerCorredorActual().then((corredor) => {
       if (!corredor) {

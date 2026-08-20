@@ -107,6 +107,7 @@ export interface EntrenadorClub {
   clubId: string;
   nombre: string;
   email?: string;
+  password?: string;
   especialidad?: string;
   creadoEn: number;
 }
@@ -117,6 +118,10 @@ export interface AtletaClub {
   nombre: string;
   edad: number;
   categoria: string;
+  telefonoPadres?: string;
+  pesoKg?: number;
+  esRegistrado?: boolean;
+  corredorId?: string;
   creadoEn: number;
 }
 

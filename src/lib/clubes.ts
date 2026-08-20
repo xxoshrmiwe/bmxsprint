@@ -1,5 +1,5 @@
 import { supabase } from './supabase';
-import type { Club, HorarioEntrenamientoClub, MangaEntrenamiento, EntrenadorClub, AtletaClub } from './types';
+import type { Club, HorarioEntrenamientoClub, MangaEntrenamiento, EntrenadorClub, AtletaClub, Corredor } from './types';
 
 export function generarCodigoInvite(nombre: string): string {
   const prefix = nombre.replace(/[^a-zA-Z]/g, '').slice(0, 4).toUpperCase() || 'BMX';
@@ -23,6 +23,16 @@ export async function crearClubLocally(nombre: string, descripcion?: string): Pr
   return club;
 }
 
+export function generarEnlaceInvitacionWhatsApp(club: Club): string {
+  const url = `${window.location.origin}/?unirse=${club.codigoInvite}`;
+  const mensaje = encodeURIComponent(
+    `🏆 ¡Hola! Te invitamos a unirte a nuestro Club de BMX "${club.nombre}" en GateRight App.\n\n` +
+    `Utiliza el código de invitación oficial: *${club.codigoInvite}*\n` +
+    `O haz clic directo en este enlace para vincularte: ${url}`
+  );
+  return `https://wa.me/?text=${mensaje}`;
+}
+
 // --- ENTRENADORES DEL CLUB ---
 export function obtenerEntrenadoresClub(clubId: string): EntrenadorClub[] {
   if (typeof window === 'undefined') return [];
@@ -30,13 +40,20 @@ export function obtenerEntrenadoresClub(clubId: string): EntrenadorClub[] {
   return raw ? JSON.parse(raw) : [];
 }
 
-export function agregarEntrenadorClub(clubId: string, nombre: string, email?: string, especialidad?: string): EntrenadorClub {
+export function agregarEntrenadorClub(
+  clubId: string,
+  nombre: string,
+  email?: string,
+  password?: string,
+  especialidad?: string
+): EntrenadorClub {
   const actuales = obtenerEntrenadoresClub(clubId);
   const nuevo: EntrenadorClub = {
     id: `ent_${Date.now()}`,
     clubId,
     nombre: nombre.trim(),
     email: email?.trim(),
+    password: password?.trim(),
     especialidad: especialidad?.trim(),
     creadoEn: Date.now()
   };
@@ -58,14 +75,28 @@ export function obtenerAtletasClub(clubId: string): AtletaClub[] {
   return raw ? JSON.parse(raw) : [];
 }
 
-export function agregarAtletaClub(clubId: string, nombre: string, edad: number, categoria: string): AtletaClub {
+export interface DatosCrearAtleta {
+  nombre: string;
+  edad: number;
+  categoria?: string;
+  telefonoPadres?: string;
+  pesoKg?: number;
+  esRegistrado?: boolean;
+  corredorId?: string;
+}
+
+export function agregarAtletaClub(clubId: string, datos: DatosCrearAtleta): AtletaClub {
   const actuales = obtenerAtletasClub(clubId);
   const nuevo: AtletaClub = {
-    id: `atl_${Date.now()}`,
+    id: datos.corredorId || `atl_${Date.now()}`,
     clubId,
-    nombre: nombre.trim(),
-    edad,
-    categoria: categoria.trim(),
+    nombre: datos.nombre.trim(),
+    edad: datos.edad,
+    categoria: (datos.categoria || `${datos.edad} años`).trim(),
+    telefonoPadres: datos.telefonoPadres?.trim(),
+    pesoKg: datos.pesoKg,
+    esRegistrado: datos.esRegistrado ?? false,
+    corredorId: datos.corredorId,
     creadoEn: Date.now()
   };
   const actualizados = [nuevo, ...actuales];
