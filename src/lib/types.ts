@@ -1,3 +1,17 @@
+export type RodadoRueda = '20x1.75' | '20x1.50' | '20x1-3/8' | 'OS20' | '24x1.75';
+
+export type TallaCuadro =
+  | 'Micro'
+  | 'Mini'
+  | 'Junior'
+  | 'Expert'
+  | 'Expert XL'
+  | 'Pro'
+  | 'Pro XL'
+  | 'Pro XXL'
+  | 'Pro XXXL'
+  | 'Cruiser 24"';
+
 export interface Corredor {
   id: string;
   nombre: string;
@@ -5,6 +19,21 @@ export interface Corredor {
   edad?: number;
   email: string;
   creadoEn: number;
+  estaturaCm?: number;
+  entrepiernaCm?: number;
+  dientesPlato?: number;
+  dientesPinon?: number;
+  rodadoRueda?: RodadoRueda;
+  tallaCuadro?: TallaCuadro;
+  largoBielasMm?: number;
+  tipoPedales?: 'clips' | 'plataforma';
+}
+
+export interface TransmisionSnapshot {
+  plato: number;
+  pinon: number;
+  gearInches: number;
+  rollOutMetros: number;
 }
 
 export interface Sesion {
@@ -15,6 +44,7 @@ export interface Sesion {
   calentamientoRealizado: boolean;
   modoMedicion?: 'asistido' | 'acelerometro';
   notas?: string;
+  transmisionSnapshot?: TransmisionSnapshot;
 }
 
 export interface PuntoTelemetria {
