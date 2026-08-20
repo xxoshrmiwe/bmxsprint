@@ -9,6 +9,33 @@ export interface DatosRegistro {
   password: string;
 }
 
+export function guardarCorredorLocal(corredor: Corredor): void {
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('bmx_local_corredor', JSON.stringify(corredor));
+  }
+}
+
+export function obtenerCorredorLocal(): Corredor | null {
+  if (typeof window === 'undefined') return null;
+  const raw = localStorage.getItem('bmx_local_corredor');
+  return raw ? JSON.parse(raw) : null;
+}
+
+export function crearCorredorOffline(nombre: string = 'Corredor BMX'): Corredor {
+  const offlineRider: Corredor = {
+    id: `local_${Date.now()}`,
+    nombre: nombre || 'Corredor BMX',
+    email: 'local@gateright.app',
+    creadoEn: Date.now(),
+    dientesPlato: 44,
+    dientesPinon: 16,
+    rodadoRueda: '20x1.75',
+    largoBielasMm: 175
+  };
+  guardarCorredorLocal(offlineRider);
+  return offlineRider;
+}
+
 export async function construirCorredorDesdeUser(user: any): Promise<Corredor> {
   const metadata = user.user_metadata || {};
   let dbData: any = null;
@@ -20,7 +47,7 @@ export async function construirCorredorDesdeUser(user: any): Promise<Corredor> {
     // Si la tabla no existe o falla la consulta, los metadatos garantizan la continuidad
   }
 
-  return {
+  const corredor: Corredor = {
     id: user.id,
     nombre: metadata.nombre ?? dbData?.nombre ?? user.email?.split('@')[0] ?? 'Corredor',
     categoria: metadata.categoria ?? dbData?.categoria ?? undefined,
@@ -40,6 +67,9 @@ export async function construirCorredorDesdeUser(user: any): Promise<Corredor> {
     largoBielasMm: dbData?.largo_bielas_mm ?? metadata.largoBielasMm ?? 175,
     tipoPedales: dbData?.tipo_pedales ?? metadata.tipoPedales ?? undefined
   };
+
+  guardarCorredorLocal(corredor);
+  return corredor;
 }
 
 export async function registrarCorredor(datos: DatosRegistro): Promise<{ sesionActiva: boolean }> {
@@ -71,7 +101,12 @@ export async function iniciarSesion(email: string, password: string, recordar = 
 }
 
 export async function cerrarSesion(): Promise<void> {
-  await supabase.auth.signOut();
+  if (typeof window !== 'undefined') {
+    localStorage.removeItem('bmx_local_corredor');
+  }
+  try {
+    await supabase.auth.signOut();
+  } catch (e) {}
 }
 
 export async function obtenerCorredorActual(): Promise<Corredor | null> {
@@ -85,30 +120,33 @@ export async function obtenerCorredorActual(): Promise<Corredor | null> {
       const {
         data: { session }
       } = await supabase.auth.getSession();
-      if (!session?.user) return null;
+      if (!session?.user) return obtenerCorredorLocal();
       return await construirCorredorDesdeUser(session.user);
     }
 
     return await construirCorredorDesdeUser(user);
   } catch (err) {
-    console.error('Error al obtener corredor actual:', err);
-    return null;
+    console.warn('Conexión con servidor interrumpida, cargando perfil local:', err);
+    return obtenerCorredorLocal();
   }
 }
 
 export async function actualizarDatosCorredor(datos: Partial<Corredor>): Promise<void> {
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) return;
+  const corredorLocal = obtenerCorredorLocal();
+  if (corredorLocal) {
+    guardarCorredorLocal({ ...corredorLocal, ...datos });
+  }
 
-  // Actualizar metadatos de usuario (persistencia universal garantizada)
-  await supabase.auth.updateUser({
-    data: { ...user.user_metadata, ...datos }
-  });
-
-  // Intentar actualizar también la tabla Supabase si los campos existen
   try {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user) return;
+
+    await supabase.auth.updateUser({
+      data: { ...user.user_metadata, ...datos }
+    });
+
     await supabase
       .from('corredores')
       .update({
@@ -122,7 +160,7 @@ export async function actualizarDatosCorredor(datos: Partial<Corredor>): Promise
       })
       .eq('id', user.id);
   } catch (e) {
-    // Si la tabla no tiene las columnas adicionales, no bloquea el guardado
+    // Si no hay red o la tabla no tiene las columnas adicionales, no bloquea la persistencia local
   }
 }
 
