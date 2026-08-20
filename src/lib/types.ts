@@ -12,6 +12,31 @@ export type TallaCuadro =
   | 'Pro XXXL'
   | 'Cruiser 24"';
 
+export const CATEGORIAS_BMX_ESTANDAR = [
+  'Principiantes (5 - 8 años)',
+  'Principiantes (9 - 12 años)',
+  'Novatos (6 y menos)',
+  'Novatos (7 - 8 años)',
+  'Novatos (9 - 10 años)',
+  'Novatos (11 - 12 años)',
+  'Novatos (13 - 14 años)',
+  'Novatos (15 - 16 años)',
+  'Novatos (17+ años)',
+  'Expertos (6 y menos)',
+  'Expertos (7 - 8 años)',
+  'Expertos (9 - 10 años)',
+  'Expertos (11 - 12 años)',
+  'Expertos (13 - 14 años)',
+  'Expertos (15 - 16 años)',
+  'Expertos (17 - 24 años)',
+  'Expertos (25+ años)',
+  'Damas Novatas / Expertas',
+  'Cruiser (24")',
+  'Junior Championship',
+  'Under 23',
+  'Elite Pro'
+] as const;
+
 export interface Corredor {
   id: string;
   nombre: string;

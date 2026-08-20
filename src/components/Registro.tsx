@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { registrarCorredor } from '../lib/cuenta';
+import { CATEGORIAS_BMX_ESTANDAR } from '../lib/types';
 import CampoPassword from './CampoPassword';
 import { IconoAlerta } from './Icono';
 
@@ -152,15 +153,21 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
               </div>
               <div>
                 <label className="mb-1 block text-xs font-bold uppercase text-slate-700" htmlFor="categoria">
-                  Categoría (opcional)
+                  Categoría
                 </label>
-                <input
+                <select
                   id="categoria"
                   value={categoria}
                   onChange={(e) => setCategoria(e.target.value)}
-                  className="input"
-                  placeholder="ej. 8 Expertos"
-                />
+                  className="input text-xs"
+                >
+                  <option value="">Seleccionar Categoría...</option>
+                  {CATEGORIAS_BMX_ESTANDAR.map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
               </div>
             </div>
           </>

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import type { Corredor, Club, EntrenadorClub, AtletaClub } from '../lib/types';
+import { CATEGORIAS_BMX_ESTANDAR } from '../lib/types';
 import {
   crearClubLocally,
   obtenerEntrenadoresClub,
@@ -254,13 +255,18 @@ export default function PanelClub({ corredor, onVolver }: Props) {
             </div>
             <div>
               <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">Categoría</label>
-              <input
-                type="text"
-                placeholder="ej. 8 Novatos"
+              <select
                 value={categoriaAtleta}
                 onChange={(e) => setCategoriaAtleta(e.target.value)}
                 className="input text-xs"
-              />
+              >
+                <option value="">Seleccionar Categoría...</option>
+                {CATEGORIAS_BMX_ESTANDAR.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-2">
