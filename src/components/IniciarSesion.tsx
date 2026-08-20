@@ -4,7 +4,7 @@ import CampoPassword from './CampoPassword';
 import { IconoAlerta } from './Icono';
 
 interface Props {
-  onAcceso: () => void;
+  onAcceso: (corredor: Corredor) => void;
   onVolver: () => void;
   onIrARegistro: () => void;
   onOlvideContrasena: () => void;
@@ -22,8 +22,8 @@ export default function IniciarSesion({ onAcceso, onVolver, onIrARegistro, onOlv
     setError(null);
     setVerificando(true);
     try {
-      await iniciarSesion(email.trim(), password, recordar);
-      onAcceso();
+      const corredor = await iniciarSesion(email.trim(), password, recordar);
+      onAcceso(corredor);
     } catch (err) {
       setError(
         err instanceof Error ? 'No pudimos iniciar sesión: ' + err.message : 'No pudimos iniciar sesión.'

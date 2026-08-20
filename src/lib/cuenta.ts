@@ -9,6 +9,39 @@ export interface DatosRegistro {
   password: string;
 }
 
+export async function construirCorredorDesdeUser(user: any): Promise<Corredor> {
+  const metadata = user.user_metadata || {};
+  let dbData: any = null;
+
+  try {
+    const { data } = await supabase.from('corredores').select('*').eq('id', user.id).maybeSingle();
+    dbData = data;
+  } catch (e) {
+    // Si la tabla no existe o falla la consulta, los metadatos garantizan la continuidad
+  }
+
+  return {
+    id: user.id,
+    nombre: metadata.nombre ?? dbData?.nombre ?? user.email?.split('@')[0] ?? 'Corredor',
+    categoria: metadata.categoria ?? dbData?.categoria ?? undefined,
+    edad: metadata.edad ? Number(metadata.edad) : (dbData?.edad ?? undefined),
+    email: user.email ?? '',
+    creadoEn: dbData?.creado_en ? new Date(dbData.creado_en).getTime() : Date.now(),
+    fotoUrl: metadata.fotoUrl ?? undefined,
+    avatarPreset: metadata.avatarPreset ?? undefined,
+    fotoBiciUrl: metadata.fotoBiciUrl ?? undefined,
+    pesoKg: metadata.pesoKg ? Number(metadata.pesoKg) : undefined,
+    estaturaCm: dbData?.estatura_cm ?? metadata.estaturaCm ?? undefined,
+    entrepiernaCm: dbData?.entrepierna_cm ?? metadata.entrepiernaCm ?? undefined,
+    dientesPlato: dbData?.dientes_plato ?? metadata.dientesPlato ?? 44,
+    dientesPinon: dbData?.dientes_pinon ?? metadata.dientesPinon ?? 16,
+    rodadoRueda: dbData?.rodado_rueda ?? metadata.rodadoRueda ?? '20x1.75',
+    tallaCuadro: dbData?.talla_cuadro ?? metadata.tallaCuadro ?? undefined,
+    largoBielasMm: dbData?.largo_bielas_mm ?? metadata.largoBielasMm ?? 175,
+    tipoPedales: dbData?.tipo_pedales ?? metadata.tipoPedales ?? undefined
+  };
+}
+
 export async function registrarCorredor(datos: DatosRegistro): Promise<{ sesionActiva: boolean }> {
   const { data, error } = await supabase.auth.signUp({
     email: datos.email,
@@ -28,10 +61,13 @@ export async function registrarCorredor(datos: DatosRegistro): Promise<{ sesionA
   return { sesionActiva: data.session !== null };
 }
 
-export async function iniciarSesion(email: string, password: string, recordar = true): Promise<void> {
+export async function iniciarSesion(email: string, password: string, recordar = true): Promise<Corredor> {
   establecerRecordar(recordar);
-  const { error } = await supabase.auth.signInWithPassword({ email, password });
+  const { data, error } = await supabase.auth.signInWithPassword({ email, password });
   if (error) throw error;
+  if (!data.user) throw new Error('No se pudo autenticar el usuario.');
+
+  return await construirCorredorDesdeUser(data.user);
 }
 
 export async function cerrarSesion(): Promise<void> {
@@ -39,34 +75,25 @@ export async function cerrarSesion(): Promise<void> {
 }
 
 export async function obtenerCorredorActual(): Promise<Corredor | null> {
-  const {
-    data: { user }
-  } = await supabase.auth.getUser();
-  if (!user) return null;
+  try {
+    const {
+      data: { user },
+      error: userError
+    } = await supabase.auth.getUser();
 
-  const metadata = user.user_metadata || {};
-  const { data } = await supabase.from('corredores').select('*').eq('id', user.id).single();
+    if (userError || !user) {
+      const {
+        data: { session }
+      } = await supabase.auth.getSession();
+      if (!session?.user) return null;
+      return await construirCorredorDesdeUser(session.user);
+    }
 
-  return {
-    id: user.id,
-    nombre: metadata.nombre ?? data?.nombre ?? 'Corredor',
-    categoria: metadata.categoria ?? data?.categoria ?? undefined,
-    edad: metadata.edad ?? data?.edad ?? undefined,
-    email: user.email ?? '',
-    creadoEn: data?.creado_en ? new Date(data.creado_en).getTime() : Date.now(),
-    fotoUrl: metadata.fotoUrl ?? undefined,
-    avatarPreset: metadata.avatarPreset ?? undefined,
-    fotoBiciUrl: metadata.fotoBiciUrl ?? undefined,
-    pesoKg: metadata.pesoKg ?? undefined,
-    estaturaCm: data?.estatura_cm ?? metadata.estaturaCm ?? undefined,
-    entrepiernaCm: data?.entrepierna_cm ?? metadata.entrepiernaCm ?? undefined,
-    dientesPlato: data?.dientes_plato ?? metadata.dientesPlato ?? 44,
-    dientesPinon: data?.dientes_pinon ?? metadata.dientesPinon ?? 16,
-    rodadoRueda: data?.rodado_rueda ?? metadata.rodadoRueda ?? '20x1.75',
-    tallaCuadro: data?.talla_cuadro ?? metadata.tallaCuadro ?? undefined,
-    largoBielasMm: data?.largo_bielas_mm ?? metadata.largoBielasMm ?? 175,
-    tipoPedales: data?.tipo_pedales ?? metadata.tipoPedales ?? undefined
-  };
+    return await construirCorredorDesdeUser(user);
+  } catch (err) {
+    console.error('Error al obtener corredor actual:', err);
+    return null;
+  }
 }
 
 export async function actualizarDatosCorredor(datos: Partial<Corredor>): Promise<void> {

@@ -99,7 +99,7 @@ export default function SprintApp() {
       case 'login':
         return (
           <IniciarSesion
-            onAcceso={irAlPanel}
+            onAcceso={(corredor) => setVista({ tipo: 'panel', corredor })}
             onVolver={() => setVista({ tipo: 'acceso' })}
             onIrARegistro={() => setVista({ tipo: 'registro' })}
             onOlvideContrasena={() => setVista({ tipo: 'olvide-password' })}
