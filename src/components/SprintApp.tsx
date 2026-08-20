@@ -69,13 +69,25 @@ export default function SprintApp() {
       setEsImpersonado(localStorage.getItem('admin_impersonating') === 'true');
     }
     obtenerCorredorActual().then((corredor) => {
-      setVista(corredor ? { tipo: 'panel', corredor } : { tipo: 'landing' });
+      if (!corredor) {
+        setVista({ tipo: 'landing' });
+      } else if (corredor.rol === 'entrenador' || corredor.nombreClub) {
+        setVista({ tipo: 'club', corredor });
+      } else {
+        setVista({ tipo: 'panel', corredor });
+      }
     });
   }, []);
 
   async function irAlPanel() {
     const corredor = await obtenerCorredorActual();
-    setVista(corredor ? { tipo: 'panel', corredor } : { tipo: 'acceso' });
+    if (!corredor) {
+      setVista({ tipo: 'acceso' });
+    } else if (corredor.rol === 'entrenador' || corredor.nombreClub) {
+      setVista({ tipo: 'club', corredor });
+    } else {
+      setVista({ tipo: 'panel', corredor });
+    }
   }
 
   const nombreCorredorActual = 'corredor' in vista ? vista.corredor.nombre : undefined;
@@ -99,7 +111,13 @@ export default function SprintApp() {
       case 'login':
         return (
           <IniciarSesion
-            onAcceso={(corredor) => setVista({ tipo: 'panel', corredor })}
+            onAcceso={(corredor) => {
+              if (corredor.rol === 'entrenador' || corredor.nombreClub) {
+                setVista({ tipo: 'club', corredor });
+              } else {
+                setVista({ tipo: 'panel', corredor });
+              }
+            }}
             onVolver={() => setVista({ tipo: 'acceso' })}
             onIrARegistro={() => setVista({ tipo: 'registro' })}
             onOlvideContrasena={() => setVista({ tipo: 'olvide-password' })}
@@ -148,6 +166,7 @@ export default function SprintApp() {
             onNuevaSesion={() => setVista({ tipo: 'nueva-sesion', corredor: vista.corredor })}
             onHistorial={() => setVista({ tipo: 'historial', corredor: vista.corredor })}
             onExportarImportar={() => setVista({ tipo: 'exportar-importar', corredor: vista.corredor })}
+            onIrAClub={() => setVista({ tipo: 'club', corredor: vista.corredor })}
             onCerrarSesion={() => setVista({ tipo: 'acceso' })}
           />
         );

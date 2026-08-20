@@ -11,10 +11,21 @@ interface Props {
 
 export default function PanelClub({ corredor, onVolver }: Props) {
   const [vista, setVista] = useState<'main' | 'mangas' | 'agenda'>('main');
+  const [nombreClub, setNombreClub] = useState(corredor.nombreClub || '');
   const [club, setClub] = useState<Club | null>(() => {
     if (typeof window === 'undefined') return null;
     const cached = localStorage.getItem('bmx_mi_club');
-    return cached ? JSON.parse(cached) : null;
+    if (cached) return JSON.parse(cached);
+    if (corredor.nombreClub) {
+      return {
+        id: `club_${Date.now()}`,
+        codigoInvite: 'RAPT-5821',
+        nombre: corredor.nombreClub,
+        creadoPor: corredor.nombre,
+        creadoEn: Date.now()
+      };
+    }
+    return null;
   });
   const [modoAcceso, setModoAcceso] = useState<'crear' | 'unirse'>('crear');
   const [codigoUnirse, setCodigoUnirse] = useState('');

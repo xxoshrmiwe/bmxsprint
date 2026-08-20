@@ -13,6 +13,7 @@ interface Props {
   onNuevaSesion: () => void;
   onHistorial: () => void;
   onExportarImportar: () => void;
+  onIrAClub?: () => void;
   onCerrarSesion: () => void;
 }
 
@@ -21,6 +22,7 @@ export default function PanelCorredor({
   onNuevaSesion,
   onHistorial,
   onExportarImportar,
+  onIrAClub,
   onCerrarSesion
 }: Props) {
   const [corredor, setCorredor] = useState<Corredor>(corredorInicial);
@@ -46,9 +48,19 @@ export default function PanelCorredor({
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 p-4">
-      <button onClick={handleCerrarSesion} className="btn-ghost">
-        ← Cerrar sesión
-      </button>
+      <div className="flex items-center justify-between">
+        <button onClick={handleCerrarSesion} className="btn-ghost">
+          ← Cerrar sesión
+        </button>
+        {onIrAClub && (
+          <button
+            onClick={onIrAClub}
+            className="cursor-pointer text-xs font-bold text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-300 hover:bg-emerald-100 transition-colors shadow-2xs"
+          >
+            🏆 Ir a mi Club BMX
+          </button>
+        )}
+      </div>
 
       <InstallPrompt />
 

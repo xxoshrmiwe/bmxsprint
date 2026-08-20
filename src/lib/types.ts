@@ -31,6 +31,8 @@ export interface Corredor {
   tallaCuadro?: TallaCuadro;
   largoBielasMm?: number;
   tipoPedales?: 'clips' | 'plataforma';
+  rol?: RolClub;
+  nombreClub?: string;
 }
 
 export interface TransmisionSnapshot {

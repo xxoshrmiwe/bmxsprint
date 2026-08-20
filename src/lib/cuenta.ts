@@ -65,7 +65,9 @@ export async function construirCorredorDesdeUser(user: any): Promise<Corredor> {
     rodadoRueda: dbData?.rodado_rueda ?? metadata.rodadoRueda ?? '20x1.75',
     tallaCuadro: dbData?.talla_cuadro ?? metadata.tallaCuadro ?? undefined,
     largoBielasMm: dbData?.largo_bielas_mm ?? metadata.largoBielasMm ?? 175,
-    tipoPedales: dbData?.tipo_pedales ?? metadata.tipoPedales ?? undefined
+    tipoPedales: dbData?.tipo_pedales ?? metadata.tipoPedales ?? undefined,
+    rol: metadata.rol ?? (dbData?.rol ?? undefined),
+    nombreClub: metadata.nombreClub ?? (dbData?.nombre_club ?? undefined)
   };
 
   guardarCorredorLocal(corredor);
