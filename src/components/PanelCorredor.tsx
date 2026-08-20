@@ -1,8 +1,11 @@
-import { cerrarSesion } from '../lib/cuenta';
+import { useState } from 'react';
+import { cerrarSesion, actualizarDatosCorredor } from '../lib/cuenta';
 import type { Corredor } from '../lib/types';
 import { IconoRayo, IconoGrafico, IconoDescarga } from './Icono';
 import DashboardCorredor from './DashboardCorredor';
 import InstallPrompt from './InstallPrompt';
+import TarjetaBicicleta from './TarjetaBicicleta';
+import ModalConfiguracionBicicleta from './ModalConfiguracionBicicleta';
 
 interface Props {
   corredor: Corredor;
@@ -13,15 +16,23 @@ interface Props {
 }
 
 export default function PanelCorredor({
-  corredor,
+  corredor: corredorInicial,
   onNuevaSesion,
   onHistorial,
   onExportarImportar,
   onCerrarSesion
 }: Props) {
+  const [corredor, setCorredor] = useState<Corredor>(corredorInicial);
+  const [modalBiciAbierto, setModalBiciAbierto] = useState(false);
+
   async function handleCerrarSesion() {
     await cerrarSesion();
     onCerrarSesion();
+  }
+
+  async function handleGuardarBici(datosActualizados: Partial<Corredor>) {
+    await actualizarDatosCorredor(datosActualizados);
+    setCorredor((prev) => ({ ...prev, ...datosActualizados }));
   }
 
   return (
@@ -40,6 +51,8 @@ export default function PanelCorredor({
           </span>
         )}
       </div>
+
+      <TarjetaBicicleta corredor={corredor} onEditar={() => setModalBiciAbierto(true)} />
 
       <DashboardCorredor corredor={corredor} />
 
@@ -63,6 +76,14 @@ export default function PanelCorredor({
           Exportar / Importar
         </button>
       </div>
+
+      <ModalConfiguracionBicicleta
+        corredor={corredor}
+        isOpen={modalBiciAbierto}
+        onClose={() => setModalBiciAbierto(false)}
+        onGuardar={handleGuardarBici}
+      />
     </div>
   );
 }
+

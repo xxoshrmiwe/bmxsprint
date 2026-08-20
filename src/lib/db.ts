@@ -7,6 +7,7 @@ export async function crearSesion(datos: {
   calentamientoRealizado: boolean;
   modoMedicion?: 'asistido' | 'acelerometro';
   notas?: string;
+  transmisionSnapshot?: import('./types').TransmisionSnapshot;
 }): Promise<Sesion> {
   const { data, error } = await supabase
     .from('sesiones')
@@ -28,7 +29,8 @@ export async function crearSesion(datos: {
     distanciaMetros: data.distancia_metros,
     calentamientoRealizado: data.calentamiento_realizado,
     modoMedicion: datos.modoMedicion ?? 'asistido',
-    notas: data.notas ?? undefined
+    notas: data.notas ?? undefined,
+    transmisionSnapshot: datos.transmisionSnapshot
   };
 }
 

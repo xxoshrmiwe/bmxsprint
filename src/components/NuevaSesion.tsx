@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import type { Corredor, Sesion } from '../lib/types';
 import { crearSesion } from '../lib/db';
+import { calcularMetricasBMX } from '../lib/bmx';
 
 interface Props {
   corredor: Corredor;
@@ -17,6 +18,12 @@ export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Prop
   const [notas, setNotas] = useState('');
   const [guardando, setGuardando] = useState(false);
 
+  const metricasBmx = calcularMetricasBMX(
+    corredor.dientesPlato ?? 44,
+    corredor.dientesPinon ?? 16,
+    corredor.rodadoRueda ?? '20x1.75'
+  );
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (distancia <= 0) return;
@@ -27,7 +34,13 @@ export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Prop
         distanciaMetros: distancia,
         calentamientoRealizado: calentamiento,
         modoMedicion,
-        notas: notas.trim() || undefined
+        notas: notas.trim() || undefined,
+        transmisionSnapshot: {
+          plato: corredor.dientesPlato ?? 44,
+          pinon: corredor.dientesPinon ?? 16,
+          gearInches: metricasBmx.gearInches,
+          rollOutMetros: metricasBmx.rollOutMetros
+        }
       });
       onSesionCreada(sesion);
     } finally {
@@ -44,6 +57,15 @@ export default function NuevaSesion({ corredor, onSesionCreada, onVolver }: Prop
       <h1 className="text-2xl font-bold text-foreground">Nuevo entrenamiento</h1>
 
       <form onSubmit={handleSubmit} className="card space-y-5">
+        {/* TRANSMISIÓN Y SETUP ACTIVO */}
+        <div className="flex items-center justify-between rounded-lg bg-emerald-50 border border-emerald-200 px-3 py-2 text-xs text-emerald-950">
+          <div className="flex items-center gap-1.5 font-medium">
+            <span>🚲 Transmisión activa:</span>
+            <strong className="font-heading text-sm font-bold">{corredor.dientesPlato ?? 44}t/{corredor.dientesPinon ?? 16}t</strong>
+          </div>
+          <span className="font-bold text-emerald-700 bg-white px-2 py-0.5 rounded border border-emerald-200">{metricasBmx.gearInches}" Gear Inches</span>
+        </div>
+
         {/* MODO DE MEDICIÓN */}
         <div className="space-y-2">
           <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground">

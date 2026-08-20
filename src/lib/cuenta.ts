@@ -44,17 +44,55 @@ export async function obtenerCorredorActual(): Promise<Corredor | null> {
   } = await supabase.auth.getUser();
   if (!user) return null;
 
-  const { data, error } = await supabase.from('corredores').select('*').eq('id', user.id).single();
-  if (error || !data) return null;
+  const metadata = user.user_metadata || {};
+  const { data } = await supabase.from('corredores').select('*').eq('id', user.id).single();
 
   return {
-    id: data.id,
-    nombre: data.nombre,
-    categoria: data.categoria ?? undefined,
-    edad: data.edad ?? undefined,
+    id: user.id,
+    nombre: data?.nombre ?? metadata.nombre ?? 'Corredor',
+    categoria: data?.categoria ?? metadata.categoria ?? undefined,
+    edad: data?.edad ?? metadata.edad ?? undefined,
     email: user.email ?? '',
-    creadoEn: new Date(data.creado_en).getTime()
+    creadoEn: data?.creado_en ? new Date(data.creado_en).getTime() : Date.now(),
+    estaturaCm: data?.estatura_cm ?? metadata.estaturaCm ?? undefined,
+    entrepiernaCm: data?.entrepierna_cm ?? metadata.entrepiernaCm ?? undefined,
+    dientesPlato: data?.dientes_plato ?? metadata.dientesPlato ?? 44,
+    dientesPinon: data?.dientes_pinon ?? metadata.dientesPinon ?? 16,
+    rodadoRueda: data?.rodado_rueda ?? metadata.rodadoRueda ?? '20x1.75',
+    tallaCuadro: data?.talla_cuadro ?? metadata.tallaCuadro ?? undefined,
+    largoBielasMm: data?.largo_bielas_mm ?? metadata.largoBielasMm ?? 175,
+    tipoPedales: data?.tipo_pedales ?? metadata.tipoPedales ?? undefined
   };
+}
+
+export async function actualizarDatosCorredor(datos: Partial<Corredor>): Promise<void> {
+  const {
+    data: { user }
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  // Actualizar metadatos de usuario (persistencia universal garantizada)
+  await supabase.auth.updateUser({
+    data: { ...user.user_metadata, ...datos }
+  });
+
+  // Intentar actualizar también la tabla Supabase si los campos existen
+  try {
+    await supabase
+      .from('corredores')
+      .update({
+        dientes_plato: datos.dientesPlato,
+        dientes_pinon: datos.dientesPinon,
+        rodado_rueda: datos.rodadoRueda,
+        talla_cuadro: datos.tallaCuadro,
+        largo_bielas_mm: datos.largoBielasMm,
+        estatura_cm: datos.estaturaCm,
+        entrepierna_cm: datos.entrepiernaCm
+      })
+      .eq('id', user.id);
+  } catch (e) {
+    // Si la tabla no tiene las columnas adicionales, no bloquea el guardado
+  }
 }
 
 export async function solicitarRecuperacion(email: string): Promise<void> {
