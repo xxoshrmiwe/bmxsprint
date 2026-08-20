@@ -19,6 +19,8 @@ export interface Corredor {
   edad?: number;
   email: string;
   creadoEn: number;
+  fotoUrl?: string;
+  avatarPreset?: string;
   estaturaCm?: number;
   entrepiernaCm?: number;
   dientesPlato?: number;
