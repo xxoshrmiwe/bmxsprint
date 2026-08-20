@@ -102,7 +102,27 @@ export interface MiembroClub {
   unidoEn: number;
 }
 
+export interface EntrenadorClub {
+  id: string;
+  clubId: string;
+  nombre: string;
+  email?: string;
+  especialidad?: string;
+  creadoEn: number;
+}
+
+export interface AtletaClub {
+  id: string;
+  clubId: string;
+  nombre: string;
+  edad: number;
+  categoria: string;
+  creadoEn: number;
+}
+
 export interface HorarioEntrenamientoClub {
+  id: string;
+  clubId: string;
   diaSemana: 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes' | 'sabado' | 'domingo';
   horaInicio: string;
   titulo: string;
