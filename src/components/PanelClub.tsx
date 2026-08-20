@@ -16,13 +16,28 @@ export default function PanelClub({ corredor, onVolver }: Props) {
     const cached = localStorage.getItem('bmx_mi_club');
     return cached ? JSON.parse(cached) : null;
   });
-  const [nombreClub, setNombreClub] = useState('');
+  const [modoAcceso, setModoAcceso] = useState<'crear' | 'unirse'>('crear');
+  const [codigoUnirse, setCodigoUnirse] = useState('');
 
   async function handleCrearClub(e: React.FormEvent) {
     e.preventDefault();
     if (!nombreClub.trim()) return;
     const nuevo = await crearClubLocally(nombreClub.trim());
     setClub(nuevo);
+  }
+
+  async function handleUnirseClub(e: React.FormEvent) {
+    e.preventDefault();
+    if (!codigoUnirse.trim()) return;
+    const clubUnido: Club = {
+      id: `club_${Date.now()}`,
+      codigoInvite: codigoUnirse.trim().toUpperCase(),
+      nombre: `Club (${codigoUnirse.trim().toUpperCase()})`,
+      creadoPor: 'entrenador',
+      creadoEn: Date.now()
+    };
+    localStorage.setItem(`bmx_mi_club`, JSON.stringify(clubUnido));
+    setClub(clubUnido);
   }
 
   if (vista === 'mangas') {
@@ -43,25 +58,68 @@ export default function PanelClub({ corredor, onVolver }: Props) {
       </div>
 
       {!club ? (
-        <form onSubmit={handleCrearClub} className="space-y-3 p-2">
-          <div className="space-y-1">
-            <h2 className="font-heading text-xl font-bold text-slate-900 uppercase">Crear o Unirse a un Club</h2>
-            <p className="text-xs text-slate-500">
-              Administra tu equipo, asigna entrenamientos y sortea carriles de grilla con anuncio por voz.
-            </p>
+        <div className="space-y-4 p-2">
+          <div className="flex rounded-xl bg-slate-100 p-1 border border-slate-200 text-xs font-bold">
+            <button
+              onClick={() => setModoAcceso('crear')}
+              className={`w-1/2 py-2 rounded-lg transition-all ${
+                modoAcceso === 'crear' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Crear Nuevo Club 🛠️
+            </button>
+            <button
+              onClick={() => setModoAcceso('unirse')}
+              className={`w-1/2 py-2 rounded-lg transition-all ${
+                modoAcceso === 'unirse' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+              }`}
+            >
+              Unirme con Código 🔑
+            </button>
           </div>
-          <input
-            type="text"
-            placeholder="Nombre de tu Club (ej. Raptors BMX)"
-            value={nombreClub}
-            onChange={(e) => setNombreClub(e.target.value)}
-            className="input"
-            required
-          />
-          <button type="submit" className="btn-primary w-full py-3.5 font-bold text-base shadow-md">
-            Crear mi Club BMX
-          </button>
-        </form>
+
+          {modoAcceso === 'crear' ? (
+            <form onSubmit={handleCrearClub} className="space-y-3">
+              <div className="space-y-1">
+                <h2 className="font-heading text-lg font-bold text-slate-900 uppercase">Crear mi Club de BMX</h2>
+                <p className="text-xs text-slate-500">
+                  Para entrenadores y directores que gestionan sus atletas, mangas y entrenamientos.
+                </p>
+              </div>
+              <input
+                type="text"
+                placeholder="Nombre de tu Club (ej. Raptors BMX)"
+                value={nombreClub}
+                onChange={(e) => setNombreClub(e.target.value)}
+                className="input"
+                required
+              />
+              <button type="submit" className="btn-primary w-full py-3.5 font-bold text-base shadow-md">
+                Crear mi Club BMX
+              </button>
+            </form>
+          ) : (
+            <form onSubmit={handleUnirseClub} className="space-y-3">
+              <div className="space-y-1">
+                <h2 className="font-heading text-lg font-bold text-slate-900 uppercase">Unirme a un Club Existente</h2>
+                <p className="text-xs text-slate-500">
+                  Ingresa el código que te compartió tu entrenador (ej. RAPT-5821) para sincronizar tu cuenta.
+                </p>
+              </div>
+              <input
+                type="text"
+                placeholder="Código del Club (ej. RAPT-5821)"
+                value={codigoUnirse}
+                onChange={(e) => setCodigoUnirse(e.target.value)}
+                className="input uppercase font-mono tracking-wider font-bold"
+                required
+              />
+              <button type="submit" className="btn-primary w-full py-3.5 font-bold text-base shadow-md">
+                Unirme al Club
+              </button>
+            </form>
+          )}
+        </div>
       ) : (
         <div className="space-y-4">
           <div className="rounded-xl bg-slate-900 text-white p-4 space-y-1.5 shadow-md">
