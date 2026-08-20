@@ -81,12 +81,22 @@ export async function registrarCorredor(datos: DatosRegistro): Promise<{ sesionA
       data: {
         nombre: datos.nombre,
         categoria: datos.categoria ?? null,
-        edad: datos.edad ?? null
+        edad: datos.edad ?? null,
+        rol: datos.rol ?? 'atleta',
+        nombreClub: datos.nombreClub ?? null,
+        ciudad: datos.ciudad ?? null
       }
     }
   });
 
   if (error) throw error;
+
+  if (datos.rol === 'entrenador' && datos.nombreClub) {
+    try {
+      const { crearClubLocally } = await import('./clubes');
+      await crearClubLocally(datos.nombreClub.trim());
+    } catch (e) {}
+  }
 
   return { sesionActiva: data.session !== null };
 }
