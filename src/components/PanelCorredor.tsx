@@ -73,7 +73,7 @@ export default function PanelCorredor({
 
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-foreground leading-tight">{corredor.nombre}</h1>
-          <div className="flex flex-wrap items-center gap-2 mt-0.5">
+          <div className="flex flex-wrap items-center gap-2 mt-1">
             {corredor.categoria && (
               <span className="inline-block rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-semibold text-primary">
                 {corredor.categoria}
@@ -82,6 +82,16 @@ export default function PanelCorredor({
             {corredor.edad && (
               <span className="text-xs text-slate-500 font-medium">
                 {corredor.edad} años
+              </span>
+            )}
+            {corredor.pesoKg && (
+              <span className="text-xs text-slate-500 font-medium border-l border-slate-200 pl-2">
+                ⚖️ {corredor.pesoKg} kg
+              </span>
+            )}
+            {corredor.estaturaCm && (
+              <span className="text-xs text-slate-500 font-medium border-l border-slate-200 pl-2">
+                📏 {corredor.estaturaCm} cm
               </span>
             )}
           </div>

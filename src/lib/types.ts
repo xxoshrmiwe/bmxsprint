@@ -21,6 +21,8 @@ export interface Corredor {
   creadoEn: number;
   fotoUrl?: string;
   avatarPreset?: string;
+  fotoBiciUrl?: string;
+  pesoKg?: number;
   estaturaCm?: number;
   entrepiernaCm?: number;
   dientesPlato?: number;

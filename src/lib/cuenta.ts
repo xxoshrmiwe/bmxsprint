@@ -49,13 +49,15 @@ export async function obtenerCorredorActual(): Promise<Corredor | null> {
 
   return {
     id: user.id,
-    nombre: data?.nombre ?? metadata.nombre ?? 'Corredor',
-    categoria: data?.categoria ?? metadata.categoria ?? undefined,
-    edad: data?.edad ?? metadata.edad ?? undefined,
+    nombre: metadata.nombre ?? data?.nombre ?? 'Corredor',
+    categoria: metadata.categoria ?? data?.categoria ?? undefined,
+    edad: metadata.edad ?? data?.edad ?? undefined,
     email: user.email ?? '',
     creadoEn: data?.creado_en ? new Date(data.creado_en).getTime() : Date.now(),
     fotoUrl: metadata.fotoUrl ?? undefined,
     avatarPreset: metadata.avatarPreset ?? undefined,
+    fotoBiciUrl: metadata.fotoBiciUrl ?? undefined,
+    pesoKg: metadata.pesoKg ?? undefined,
     estaturaCm: data?.estatura_cm ?? metadata.estaturaCm ?? undefined,
     entrepiernaCm: data?.entrepierna_cm ?? metadata.entrepiernaCm ?? undefined,
     dientesPlato: data?.dientes_plato ?? metadata.dientesPlato ?? 44,
