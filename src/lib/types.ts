@@ -81,3 +81,44 @@ export interface BackupCorredor {
   sesiones: Sesion[];
   intentos: Intento[];
 }
+
+export type RolClub = 'entrenador' | 'atleta';
+
+export interface Club {
+  id: string;
+  codigoInvite: string;
+  nombre: string;
+  descripcion?: string;
+  creadoPor: string;
+  creadoEn: number;
+}
+
+export interface MiembroClub {
+  clubId: string;
+  corredorId: string;
+  rol: RolClub;
+  unidoEn: number;
+}
+
+export interface HorarioEntrenamientoClub {
+  diaSemana: 'lunes' | 'martes' | 'miercoles' | 'jueves' | 'viernes' | 'sabado' | 'domingo';
+  horaInicio: string;
+  titulo: string;
+  descripcion?: string;
+}
+
+export interface AsignacionCarrilManga {
+  carril: number;
+  corredorId: string;
+  corredorNombre: string;
+  tiempoTotalMs?: number;
+}
+
+export interface MangaEntrenamiento {
+  id: string;
+  clubId: string;
+  numeroManga: number;
+  carriles: AsignacionCarrilManga[];
+  creadoEn: number;
+}
+
