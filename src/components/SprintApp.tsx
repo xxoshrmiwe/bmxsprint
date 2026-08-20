@@ -13,6 +13,7 @@ import Calentamiento from './Calentamiento';
 import GateTimer from './GateTimer';
 import Historial from './Historial';
 import ExportarImportar from './ExportarImportar';
+import PanelClub from './PanelClub';
 
 type Vista =
   | { tipo: 'cargando' }
@@ -27,7 +28,8 @@ type Vista =
   | { tipo: 'calentamiento'; corredor: Corredor; sesion: Sesion }
   | { tipo: 'gate'; corredor: Corredor; sesion: Sesion }
   | { tipo: 'historial'; corredor: Corredor }
-  | { tipo: 'exportar-importar'; corredor: Corredor };
+  | { tipo: 'exportar-importar'; corredor: Corredor }
+  | { tipo: 'club'; corredor: Corredor };
 
 function BarraModoAdmin({ nombreCorredor }: { nombreCorredor?: string }) {
   async function handleVolverAdmin() {
@@ -146,7 +148,16 @@ export default function SprintApp() {
             onNuevaSesion={() => setVista({ tipo: 'nueva-sesion', corredor: vista.corredor })}
             onHistorial={() => setVista({ tipo: 'historial', corredor: vista.corredor })}
             onExportarImportar={() => setVista({ tipo: 'exportar-importar', corredor: vista.corredor })}
+            onIrAClub={() => setVista({ tipo: 'club', corredor: vista.corredor })}
             onCerrarSesion={() => setVista({ tipo: 'acceso' })}
+          />
+        );
+
+      case 'club':
+        return (
+          <PanelClub
+            corredor={vista.corredor}
+            onVolver={() => setVista({ tipo: 'panel', corredor: vista.corredor })}
           />
         );
 
