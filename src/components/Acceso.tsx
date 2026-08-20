@@ -31,7 +31,7 @@ export default function Acceso({ onExistente, onNuevo }: Props) {
             tab === 'club' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          🏆 Clubes & Entrenadores
+          🏆 Clubes & Escuelas BMX
         </button>
       </div>
 
@@ -58,17 +58,18 @@ export default function Acceso({ onExistente, onNuevo }: Props) {
         <div className="space-y-4 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-5 text-left shadow-sm">
           <div className="space-y-1 text-center">
             <span className="text-2xl">🏆</span>
-            <h2 className="font-heading text-lg font-bold uppercase text-slate-900">Módulo para Clubes & Entrenadores</h2>
+            <h2 className="font-heading text-lg font-bold uppercase text-slate-900">Acceso Institucional de Club</h2>
             <p className="text-xs text-slate-600">
-              Gestión de equipo, partidor de 8 carriles con voz y agenda semanal.
+              Gestión de escuela deportiva, partidor de 8 carriles con voz y agenda semanal.
             </p>
           </div>
 
           <div className="space-y-2 rounded-xl bg-white p-3 border border-emerald-200 text-xs text-slate-700">
             <h3 className="font-bold text-emerald-800 uppercase text-[11px] flex items-center gap-1">
-              <span>✨ ¿Qué incluye para tu Club?</span>
+              <span>✨ ¿Qué incluye la cuenta del Club?</span>
             </h3>
             <ul className="space-y-1 list-disc list-inside text-[11px] text-slate-600">
+              <li>Alta y registro de los Entrenadores de la escuela.</li>
               <li>Sorteo de mangas y asignación de 1 a 8 carriles.</li>
               <li>Anuncio por voz sintética (TTS) por los altoparlantes de la pista.</li>
               <li>Programación semanal de rutinas y entrenamientos.</li>
@@ -78,10 +79,10 @@ export default function Acceso({ onExistente, onNuevo }: Props) {
 
           <div className="space-y-3 pt-2">
             <button onClick={onExistente} className="btn-primary w-full py-3.5 font-bold text-base shadow-md">
-              Iniciar Sesión como Entrenador
+              Iniciar Sesión del Club
             </button>
             <button onClick={onNuevo} className="btn-secondary w-full py-3.5 font-bold text-base">
-              Registrar Nuevo Club / Entrenador
+              Registrar Nuevo Club / Escuela
             </button>
           </div>
         </div>

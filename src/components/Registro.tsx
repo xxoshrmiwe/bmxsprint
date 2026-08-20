@@ -10,15 +10,15 @@ interface Props {
 }
 
 export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) {
-  const [tipoCuenta, setTipoCuenta] = useState<'atleta' | 'entrenador'>('atleta');
+  const [tipoCuenta, setTipoCuenta] = useState<'atleta' | 'club'>('atleta');
 
   // Campos para Atleta / Corredor
   const [nombre, setNombre] = useState('');
   const [categoria, setCategoria] = useState('');
   const [edad, setEdad] = useState('');
 
-  // Campos para Entrenador / Club
-  const [nombreEntrenador, setNombreEntrenador] = useState('');
+  // Campos para Institución / Club
+  const [nombreDirector, setNombreDirector] = useState('');
   const [nombreClub, setNombreClub] = useState('');
   const [ciudad, setCiudad] = useState('');
 
@@ -34,15 +34,15 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
     e.preventDefault();
     setError(null);
 
-    const nombreFinal = tipoCuenta === 'entrenador' ? nombreEntrenador.trim() : nombre.trim();
+    const nombreFinal = tipoCuenta === 'club' ? nombreDirector.trim() : nombre.trim();
 
     if (!nombreFinal) {
-      setError(tipoCuenta === 'entrenador' ? 'Escribe tu nombre de entrenador.' : 'Escribe tu nombre.');
+      setError(tipoCuenta === 'club' ? 'Escribe el nombre del director o representante legal.' : 'Escribe tu nombre.');
       return;
     }
 
-    if (tipoCuenta === 'entrenador' && !nombreClub.trim()) {
-      setError('Escribe el nombre de tu Club o Escuela de BMX.');
+    if (tipoCuenta === 'club' && !nombreClub.trim()) {
+      setError('Escribe el nombre oficial de tu Club o Escuela de BMX.');
       return;
     }
 
@@ -63,9 +63,9 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
         edad: tipoCuenta === 'atleta' && edad ? Number(edad) : undefined,
         email: email.trim(),
         password,
-        rol: tipoCuenta,
-        nombreClub: tipoCuenta === 'entrenador' ? nombreClub.trim() : undefined,
-        ciudad: tipoCuenta === 'entrenador' ? (ciudad.trim() || undefined) : undefined
+        rol: tipoCuenta === 'club' ? 'entrenador' : 'atleta',
+        nombreClub: tipoCuenta === 'club' ? nombreClub.trim() : undefined,
+        ciudad: tipoCuenta === 'club' ? (ciudad.trim() || undefined) : undefined
       });
       onRegistrado({ ...resultado, email: email.trim() });
     } catch (err) {
@@ -83,7 +83,7 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
 
       <div className="space-y-1 text-center">
         <h1 className="font-heading text-2xl font-bold uppercase text-slate-900">Crear Cuenta Nueva</h1>
-        <p className="text-xs text-slate-500">Elige el tipo de cuenta para configurar tus campos correctamente.</p>
+        <p className="text-xs text-slate-500">Selecciona si eres un Corredor Individual o una Escuela / Club de BMX.</p>
       </div>
 
       {/* PESTAÑAS DE ROL */}
@@ -99,12 +99,12 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
         </button>
         <button
           type="button"
-          onClick={() => setTipoCuenta('entrenador')}
+          onClick={() => setTipoCuenta('club')}
           className={`w-1/2 py-2.5 rounded-lg transition-all ${
-            tipoCuenta === 'entrenador' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
+            tipoCuenta === 'club' ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-900'
           }`}
         >
-          🏆 Entrenador / Club
+          🏆 Club / Escuela BMX
         </button>
       </div>
 
@@ -165,34 +165,34 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
             </div>
           </>
         ) : (
-          /* CAMPOS ENTRENADOR / CLUB */
+          /* CAMPOS INSTITUCIÓN / CLUB */
           <>
             <div>
-              <label className="mb-1 block text-xs font-bold uppercase text-slate-700" htmlFor="nombreEntrenador">
-                Nombre del Entrenador / Director
-              </label>
-              <input
-                id="nombreEntrenador"
-                value={nombreEntrenador}
-                onChange={(e) => setNombreEntrenador(e.target.value)}
-                required
-                autoFocus
-                className="input"
-                placeholder="Ej. Profe Carlos Restrepo"
-              />
-            </div>
-
-            <div>
               <label className="mb-1 block text-xs font-bold uppercase text-slate-700" htmlFor="nombreClub">
-                Nombre de la Escuela / Club de BMX
+                Nombre Oficial de la Escuela / Club
               </label>
               <input
                 id="nombreClub"
                 value={nombreClub}
                 onChange={(e) => setNombreClub(e.target.value)}
                 required
+                autoFocus
                 className="input"
                 placeholder="Ej. Club BMX Raptors"
+              />
+            </div>
+
+            <div>
+              <label className="mb-1 block text-xs font-bold uppercase text-slate-700" htmlFor="nombreDirector">
+                Nombre del Director / Representante Legal
+              </label>
+              <input
+                id="nombreDirector"
+                value={nombreDirector}
+                onChange={(e) => setNombreDirector(e.target.value)}
+                required
+                className="input"
+                placeholder="Ej. Carlos Restrepo"
               />
             </div>
 
@@ -226,7 +226,7 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
               required
               autoComplete="username"
               className="input"
-              placeholder="profe@correo.com"
+              placeholder="contacto@clubbmx.com"
             />
           </div>
 
@@ -260,7 +260,7 @@ export default function Registro({ onRegistrado, onVolver, onIrALogin }: Props) 
         </div>
 
         <button type="submit" disabled={creando} className="btn-primary w-full py-3.5 font-bold text-base shadow-md">
-          {creando ? 'Creando Cuenta...' : tipoCuenta === 'entrenador' ? 'Registrar mi Club de BMX' : 'Registrarme'}
+          {creando ? 'Creando Cuenta...' : tipoCuenta === 'club' ? 'Registrar Club de BMX' : 'Registrarme'}
         </button>
       </form>
 
