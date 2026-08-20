@@ -1,173 +1,50 @@
-# GATERIGHT BMX
+# GATERIGHT BMX (v2.0.1)
 
-Cronómetro de gate para entrenamientos de BMX Racing: registra corredores, arranca un nuevo entrenamiento indicando la distancia del sprint, modo de medición (Asistido o Solo Bolsillo con Acelerómetro), realiza (o salta) un calentamiento, reproduce un audio de salida al azar y mide el tiempo desde el "gate drop" hasta que detienes manualmente o al frenar tras la meta.
+Cronómetro de gate y Suite Institucional para entrenamientos de BMX Racing: registra corredores y escuelas deportivas, gestiona entrenadores, audita atletas, programa la agenda semanal, genera mangas de 8 carriles con locución por voz sintética y mide el tiempo de sprint desde el "gate drop" hasta la meta.
 
-## Stack
+## Stack & Arquitectura
 
-- **Astro** (`output: 'static'`) — el sitio se genera como HTML/JS estático. La app de los corredores habla directo con Supabase desde el navegador; el panel de admin usa un puñado de funciones serverless de Vercel (`api/admin/*`) para las operaciones que requieren privilegios elevados.
-- **React** — un solo island (`src/components/SprintApp.tsx`) monta toda la app con `client:only="react"`.
-- **PWA Standalone & Service Worker** — aplicación web progresiva instalable nativamente en Android e iOS sin barras del navegador, respaldada por `manifest.webmanifest` y `public/sw.js`.
-- **Modo Solo con Acelerómetro 3D** — detección de frenado por sensores de movimiento (`devicemotion`) calibrados para iPhone 15 (fuerza dinámica pura) y Android (fuerza con gravedad), con confirmación de 3 segundos (vibración en Android y señal auditiva rítmica en iOS).
-- **Tailwind CSS v4** — vía `@tailwindcss/vite`.
-- **Supabase** (Auth + Postgres) — reemplaza lo que antes era IndexedDB local. Cada corredor es una cuenta real (correo + contraseña) que funciona desde cualquier dispositivo, con:
-  - Correo de bienvenida al registrarse (plantilla "Confirm signup" de Supabase Auth).
-  - Recuperar contraseña por correo (plantilla "Reset password" de Supabase Auth) — ver [`src/pages/restablecer-password.astro`](src/pages/restablecer-password.astro).
-  - Base de datos Postgres con Row Level Security: cada corredor solo puede ver/editar sus propias sesiones e intentos.
-- **Exportar/Importar JSON** — respaldo manual adicional de las sesiones y tiempos de un corredor (botón "Exportar / Importar" en el panel).
-- **Rutina de calentamiento** (`src/lib/warmup.ts`) — ejercicios sin equipo adaptados de [exercises-dataset](https://github.com/hasaneyldrm/exercises-dataset) (MIT), organizados en tres rutinas según la edad del corredor. Ver [`NOTICE-ejercicios.md`](NOTICE-ejercicios.md) para la atribución completa.
+- **Astro** (`output: 'static'`) — el sitio se genera como HTML/JS estático optimizado. La app habla directo con Supabase desde el navegador; el panel de admin usa funciones serverless de Vercel (`api/admin/*`) para operaciones privilegiadas.
+- **React** — islas de React (`src/components/SprintApp.tsx`) montadas con `client:only="react"`.
+- **Suite Institucional de Clubes & Escuelas BMX** — gestión integral para escuelas deportivas:
+  - **Credenciales para Entrenadores:** Alta de profesores secundarios con correo y clave para dirigir entrenamientos en pista.
+  - **Vinculación & Fichas de Atletas:** Fichas manuales completas (Nombre del niño, Edad, Categoría, Teléfono de Padres y Peso kg) o vinculación autónoma vía código de invitación (`RAPT-5821`).
+  - **Invitaciones por WhatsApp 📲:** Enlaces directos (`https://gaterightbmx.com/?unirse=RAPT-5821`) con mensaje formateado para enviar a grupos de padres.
+  - **Sorteo de Mangas de 8 Carriles con Locución por Voz (TTS):** Asistencia en vivo en la grilla, agrupación por edades (*5-8, 9-12, 13-16, 17+*) y anuncio automático por altoparlantes.
+  - **Agenda Semanal Dinámica:** Publicación de rutinas y horarios oficiales del equipo.
+- **Categorías BMX Estandarizadas (`CATEGORIAS_BMX_ESTANDAR`)** — desplegables `<select>` con la estructura oficial de categorías (Principiantes, Novatos, Expertos, Damas, Cruiser, Championship, Elite Pro).
+- **Tolerancia a Fallos de Red & Fallback Offline** — persistencia local en `localStorage` con botón de *"Entrar en Modo Local / Autónomo ⚡"* ante caídas o interrupciones de red.
+- **PWA Standalone & Service Worker** — aplicación web progresiva instalable en Android e iOS sin barras de navegación (`manifest.webmanifest` y `public/sw.js`).
+- **Modo Solo con Acelerómetro 3D** — detección de frenado por sensores de movimiento (`devicemotion`) calibrados para iPhone 15 (fuerza dinámica) y Android (con gravedad), con confirmación sonora/vibratoria de 3s.
+- **Tailwind CSS v4** — estilizado vía `@tailwindcss/vite`.
+- **Supabase (Auth + Postgres)** — persistencia universal de perfiles, sesiones, intentos y metas con Row Level Security.
+- **Panel Super Admin (`/bmxadmin`)** — gestión de corredores, campaigns de email y nueva pestaña **"Clubes & Escuelas 🏆"** para supervisar códigos de invitación e instituciones registradas.
 
-## Configurar Supabase (obligatorio)
+## Estructura de Archivos
 
-1. Creá un proyecto gratis en [supabase.com](https://supabase.com).
-2. En **SQL Editor**, pegá y corré el contenido de [`supabase/schema.sql`](supabase/schema.sql). Esto crea las tablas `corredores`, `sesiones`, `intentos`, `metas` (una meta de ritmo por corredor, en segundos cada 10 metros — sirve para cualquier distancia que entrene), sus políticas de Row Level Security, y un trigger que crea el perfil del corredor automáticamente cuando alguien se registra. Si ya habías corrido una versión anterior de este archivo, basta con volver a correrlo: usa `create table if not exists`.
-3. En **Settings → API**, copiá el **Project URL** y la **anon public key**.
-4. Copiá `.env.example` a `.env` y completá esos dos valores:
-   ```
-   PUBLIC_SUPABASE_URL=https://tu-proyecto.supabase.co
-   PUBLIC_SUPABASE_ANON_KEY=tu-anon-key
-   ```
-5. En **Authentication → URL Configuration**, agregá como Redirect URL:
-   - `http://localhost:4321/**` (para desarrollo local)
-   - `https://tu-dominio-en-vercel.vercel.app/**` (una vez que tengas el deploy)
-
-### Personalizar los correos (bienvenida y recuperación)
-
-En **Authentication → Email Templates** de Supabase están las plantillas que ya disparan los flujos de esta app:
-
-- **Confirm signup** → es el correo de bienvenida que recibe cada corredor al registrarse.
-- **Reset password** → es el correo que recibe al pedir "¿Olvidaste tu contraseña?".
-
-Podés editar el asunto y el HTML de cada una para que suene más a "GATERIGHT BMX" en vez del texto genérico de Supabase.
-
-> **Límite del plan gratis:** Supabase usa un SMTP propio para el plan gratuito con un límite bajo de correos por hora (pensado para pruebas). Para uso real con varias familias, conviene configurar un SMTP propio (ej. Resend, gratis hasta 3,000 correos/mes) en **Settings → Auth → SMTP Settings**.
-
-## PWA e Instalación en Dispositivos Móviles
-
-La app incluye soporte nativo PWA:
-- **`public/manifest.webmanifest`**: Configurado con `display: "standalone"`, `scope: "/"`, iconos `192x192`, `512x512` y `maskable`.
-- **`public/sw.js`**: Service Worker para precarga y ejecución fuera de línea.
-- **`<InstallPrompt />`**: Componente de instalación reutilizable con contexto `InstallPwaProvider`:
-  - **En Android:** Dispara el diálogo nativo de instalación usando `beforeinstallprompt`.
-  - **En iOS:** Modal accesible con instrucciones paso a paso para Safari (`Compartir → Agregar a inicio`).
-  - **Regla de 14 días:** Guarda en `localStorage` la decisión del usuario para no mostrar el aviso nuevamente por 14 días si es descartado.
-
-## Modo Solo (Bolsillo) con Acelerómetro
-
-Diseñado para entrenamientos autónomos sin necesidad de un tercero en la meta:
-1. Eliges **"📱 Solo (Bolsillo)"** al crear la sesión.
-2. Presionas **"📱 Guardar en bolsillo e Iniciar (10s)"**, lo que desbloquea el canal de audio en iOS Safari y solicita permisos del acelerómetro.
-3. Dispones de **10 segundos de cuenta regresiva** para guardar el teléfono en el jersey o pantalón y acomodarte en el partidor.
-4. Suena la salida oficial y corres el sprint.
-5. Al cruzar la meta y frenar de golpe, el acelerómetro congela automáticamente el cronómetro.
-6. El celular emite una **confirmación de 3 segundos** (3s de vibración rítmica en Android y 3s de ráfaga sonora metálica en iPhone).
-
-## Panel de administración (`/bmxadmin`)
-
-Ruta oculta (no está linkeada en ningún menú, y lleva `noindex` + está bloqueada en `robots.txt`) para ver todos los corredores registrados, estadísticas generales, y disparar el correo de "recuperar contraseña" de cualquier corredor.
-
-**La seguridad real no es que la URL sea secreta** — es que el backend (`api/admin/*`) verifica del lado del servidor que quien llama inició sesión con una cuenta específicamente autorizada. Ni la contraseña del admin ni la `service_role key` de Supabase están en el código en ningún momento.
-
-### Configuración
-
-1. **Creá la cuenta del admin en Supabase** (no por la app): **Authentication → Users → Add User**, cargá el correo y la contraseña, marcá "Auto Confirm User". Esa cuenta *no* aparece como corredor (no pasa por el trigger de registro).
-2. En **Settings → API**, copiá la **`service_role` key** (la secreta, distinta de la `anon`/`publishable`). **Nunca la pongas en un archivo `PUBLIC_*` ni la subas al repo** — solo como variable de entorno del servidor.
-3. Variables de entorno necesarias (además de las `PUBLIC_SUPABASE_*` de arriba), **sin prefijo `PUBLIC_`** para que nunca lleguen al navegador:
-   ```
-   SUPABASE_SERVICE_ROLE_KEY=tu-service-role-key
-   ADMIN_EMAILS=correo1@ejemplo.com,correo2@ejemplo.com
-   ```
-   `ADMIN_EMAILS` es una lista separada por comas de los correos autorizados a entrar a `/bmxadmin`.
-4. En Vercel, cargá esas mismas variables en **Settings → Environment Variables** (o con `vercel env add NOMBRE production`, igual que las `PUBLIC_*`).
-
-### Cómo funciona
-
-- `src/pages/bmxadmin.astro` + `src/components/AdminApp.tsx`: login con correo/contraseña (la misma auth de Supabase), y si la sesión es válida, pide los datos a la API.
-- `api/admin/data.ts`: verifica el token contra `ADMIN_EMAILS`, y si es admin, usa la `service_role key` (que salta el Row Level Security) para traer todos los corredores, sus estadísticas y sus correos.
-- `api/admin/recuperar.ts`: dispara el correo de "recuperar contraseña" (plantilla "Reset password" de Supabase) para el corredor que elijas desde la tabla.
-
-## Buzón de ideas (bombillo flotante)
-
-El bombillo flotante que aparece en toda la app abre una caja de comentarios; lo que se escribe ahí llega por correo usando [Resend](https://resend.com) (gratis hasta 3,000 correos/mes, no requiere dominio propio para empezar).
-
-1. Creá una cuenta gratis en [resend.com](https://resend.com) y copiá tu **API Key** desde el dashboard.
-2. Variables de entorno necesarias (server-only, sin prefijo `PUBLIC_`):
-   ```
-   RESEND_API_KEY=tu-resend-api-key
-   FEEDBACK_TO_EMAIL=oscargonzalez0710@gmail.com
-   ```
-3. En Vercel, cargá esas mismas variables en **Settings → Environment Variables**.
-4. Por defecto los correos se mandan desde `onboarding@resend.dev` (el remitente de pruebas de Resend, funciona sin verificar un dominio). Si más adelante querés que salgan desde un correo propio (ej. `ideas@gaterightbmx.com`), hay que verificar ese dominio en Resend y cambiar el `from` en [`api/feedback.ts`](api/feedback.ts).
-
-`api/feedback.ts` valida el mensaje (no vacío, máximo 2000 caracteres) y descarta en silencio los envíos que llenen el campo trampa oculto (protección básica contra bots), antes de mandar el correo.
-
-## Cómo agregar los audios de salida (gate)
-
-1. Coloca tus archivos `.mp3`, `.wav`, `.ogg` o `.m4a` en [`src/assets/gate/`](src/assets/gate/).
-2. Se detectan automáticamente al hacer build o al correr `npm run dev` — no hay que editar ningún manifiesto ni código.
-3. **Importante:** cada audio debe terminar exactamente en el momento del "drop" (el tono/klaxon de salida), sin silencio después. El cronómetro arranca justo cuando el audio termina de reproducirse.
-4. Sube varios audios con distintos tiempos de espera para que el corredor no memorice el patrón — así funciona el gate real en pista.
-
-Ver [`src/assets/gate/README.md`](src/assets/gate/README.md) para más detalle.
+```text
+src/
+├── components/
+│   ├── Acceso.tsx                  # Pestañas de acceso para Corredores vs Clubes
+│   ├── Registro.tsx                # Formulario de registro adaptado por rol (Atleta vs Club)
+│   ├── IniciarSesion.tsx           # Login con respaldo de Modo Local / Offline ⚡
+│   ├── PanelCorredor.tsx           # Dashboard limpio para corredores y familias
+│   ├── PanelClub.tsx               # Hub institucional para gestión de Clubes, Atletas y Profesores
+│   ├── GeneradorMangasCarriles.tsx # Partidor de 8 carriles con asistencia y voz TTS
+│   ├── ProgramadorSemanalClub.tsx  # CRUD de agenda semanal del club
+│   ├── GateTimer.tsx               # Cronómetro de gate y sensores de acelerómetro
+│   └── AdminApp.tsx                # Super Admin con gestión de Corredores, Clubes y Email Campaigns
+├── lib/
+│   ├── cuenta.ts                   # Persistencia local y auth de Supabase
+│   ├── clubes.ts                   # Helpers de gestión de clubes, invitaciones WA y TTS
+│   ├── adminApi.ts                 # Cliente API de administración y clubes
+│   └── types.ts                    # Modelo de datos (Corredor, Club, EntrenadorClub, AtletaClub, Categorías)
+```
 
 ## Comandos
 
 | Comando           | Acción                                        |
 | :---------------- | :--------------------------------------------- |
-| `pnpm install`    | Instala dependencias                          |
-| `pnpm run dev`    | Corre el servidor local en `localhost:4321`   |
-| `pnpm run build`  | Genera el sitio estático en `./dist/`         |
-| `pnpm run preview`| Sirve el build de producción localmente        |
-
-## Desplegar en Vercel (gratis)
-
-1. Sube este proyecto a un repositorio de GitHub/GitLab/Bitbucket.
-2. En [vercel.com](https://vercel.com), "Add New Project" → importa el repositorio.
-3. Vercel detecta Astro automáticamente (build command `astro build`, output `dist`).
-4. En **Settings → Environment Variables** del proyecto en Vercel, agregá `PUBLIC_SUPABASE_URL`, `PUBLIC_SUPABASE_ANON_KEY`, y si vas a usar el panel de admin, también `SUPABASE_SERVICE_ROLE_KEY` y `ADMIN_EMAILS` (ver sección de arriba).
-5. Agregá la URL final de Vercel a los Redirect URLs de Supabase (paso 5 de la configuración de arriba) — si no, el enlace de "recuperar contraseña" no va a funcionar en producción.
-6. Cada vez que agregues nuevos audios a `src/assets/gate/` y hagas push, Vercel los incluye en el próximo deploy.
-
-## Estructura del proyecto
-
-```text
-public/
-├── manifest.webmanifest   # Manifiesto PWA (standalone, iconos, scope)
-├── sw.js                 # Service Worker para ejecución PWA
-├── icon-192.png          # Icono PWA 192x192
-├── icon-512.png          # Icono PWA 512x512
-└── icon-maskable-512.png # Icono PWA Maskable 512x512
-api/
-├── _lib/
-│   ├── supabaseAdmin.ts   # Cliente de Supabase con la service_role key (solo servidor)
-│   └── verificarAdmin.ts  # Valida el token del caller contra ADMIN_EMAILS
-├── admin/
-│   ├── data.ts        # GET: corredores + estadísticas (requiere ser admin)
-│   └── recuperar.ts   # POST: dispara el correo de recuperación de un corredor
-└── feedback.ts        # POST: manda por correo (Resend) lo que se escribe en el bombillo flotante
-src/
-├── assets/gate/       # Audios de salida (.mp3/.wav/.ogg/.m4a) — los subes tú
-├── components/        # Componentes React (InstallPrompt, Registro, Login, GateTimer, Historial, Admin, Bombillo)
-├── context/
-│   └── InstallPwaContext.tsx # Proveedor de contexto PWA (beforeinstallprompt, descarte 14 días, iOS)
-├── layouts/           # Layout de Astro (PWA metas, safe area, Tailwind)
-├── lib/
-│   ├── audio.ts       # Detecta y elige al azar un audio de gate
-│   ├── supabase.ts    # Cliente de Supabase (usa las env vars PUBLIC_SUPABASE_*)
-│   ├── cuenta.ts      # Registro, login, logout, recuperar/actualizar contraseña (Supabase Auth)
-│   ├── db.ts          # Sesiones e intentos (consultas a Supabase Postgres)
-│   ├── adminApi.ts    # Cliente del front para /api/admin/*
-│   ├── warmup.ts      # Rutinas de calentamiento por edad (ver NOTICE-ejercicios.md)
-│   └── types.ts       # Modelo de datos (Corredor, Sesion, Intento)
-└── pages/
-    ├── index.astro              # Monta la app (client:only="react")
-    ├── restablecer-password.astro  # Página a la que redirige el correo de recuperación
-    └── bmxadmin.astro           # Panel de administración (oculto, no linkeado)
-supabase/
-└── schema.sql         # Tablas, RLS y trigger — correr una vez en el SQL Editor de Supabase
-```
-
-## Aviso sobre los datos
-
-Los corredores, sesiones e intentos viven en tu proyecto de Supabase (Postgres), no en el navegador — por eso funcionan desde cualquier dispositivo iniciando sesión con el mismo correo. La cuenta se protege con la autenticación real de Supabase.
-
-**Sobre eliminar una cuenta:** si un corredor quiere borrar su cuenta, se hace manualmente desde el dashboard de Supabase (**Authentication → Users**).
+| `npm run dev`     | Corre el servidor local en `localhost:4321`   |
+| `npm run build`   | Genera el sitio estático en `./dist/`         |
+| `npm run preview` | Sirve el build de producción localmente        |
