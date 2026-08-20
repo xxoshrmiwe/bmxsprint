@@ -1,4 +1,4 @@
-const CACHE_NAME = 'gateright-bmx-v2';
+const CACHE_NAME = 'gateright-bmx-v3';
 const ASSETS_TO_CACHE = [
   '/manifest.webmanifest',
   '/favicon.ico',
@@ -27,9 +27,14 @@ self.addEventListener('activate', (event) => {
   );
 });
 
-// 3. Estrategia Network-First para Navegación (HTML / Páginas principales)
+// 3. Estrategia Network-First para Navegación y bypass de APIs externas (Supabase)
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+
+  // IMPORTANTE: Ignorar solicitudes a dominios externos (ej. Supabase, APIs de autenticación)
+  if (!event.request.url.startsWith(self.location.origin)) {
+    return;
+  }
 
   const isHTMLRequest = event.request.mode === 'navigate' ||
     (event.request.headers.get('accept') && event.request.headers.get('accept').includes('text/html'));
@@ -53,17 +58,17 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Stale-While-Revalidate para recursos estáticos (imágenes, scripts bundle)
+  // Stale-While-Revalidate para recursos estáticos locales del propio dominio
   event.respondWith(
     caches.match(event.request).then((cachedResponse) => {
       const fetchPromise = fetch(event.request)
         .then((networkResponse) => {
           if (networkResponse && networkResponse.status === 200) {
-            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, networkResponse));
+            const responseClone = networkResponse.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, responseClone));
           }
           return networkResponse;
-        })
-        .catch(() => {});
+        });
 
       return cachedResponse || fetchPromise;
     })
