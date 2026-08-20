@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import {
   IconoRayo,
   IconoReloj,
@@ -35,9 +36,9 @@ const CARACTERISTICAS = [
   },
   {
     Icono: IconoUsuario,
-    titulo: 'Perfil Multicorredor',
-    texto: 'Cuentas individuales para compartir el celular entre hermanos sin mezclar marcas.',
-    badge: 'Familia / Equipo',
+    titulo: 'Perfil & Transmisión BMX',
+    texto: 'Guarda relación plato/piñón, rodado, bielas, fotos de bicicleta y biometría.',
+    badge: 'Setup BMX',
     colorBadge: 'bg-purple-50 text-purple-700 border-purple-200'
   },
   {
@@ -50,6 +51,8 @@ const CARACTERISTICAS = [
 ];
 
 export default function Landing({ onIniciar }: Props) {
+  const [modalClubAbierto, setModalClubAbierto] = useState(false);
+
   return (
     <div className="mx-auto max-w-xl space-y-8 p-4 py-6 sm:p-8">
       {/* Hero Header */}
@@ -89,6 +92,25 @@ export default function Landing({ onIniciar }: Props) {
           Recrea la sensación real de la pista con audios de partidor oficial, esperas al azar no anticipables
           y detección automática por sensores o freno asistido.
         </p>
+      </div>
+
+      {/* BANNER PROMO CLUBES */}
+      <div className="rounded-2xl border border-emerald-300 bg-emerald-50/70 p-4 flex items-center justify-between gap-3 shadow-2xs">
+        <div className="space-y-0.5 text-left">
+          <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-800 bg-emerald-200/60 px-2 py-0.5 rounded border border-emerald-300">
+            🏆 Para Escuelas & Clubes
+          </span>
+          <h3 className="font-heading text-sm font-bold text-slate-900 mt-1">
+            Partidor de 8 Carriles con Anuncio por Voz
+          </h3>
+          <p className="text-xs text-slate-600">Sorteo de mangas y agenda semanal para entrenadores.</p>
+        </div>
+        <button
+          onClick={() => setModalClubAbierto(true)}
+          className="cursor-pointer shrink-0 rounded-lg bg-emerald-600 px-3 py-2 text-xs font-bold text-white hover:bg-emerald-700 transition-colors shadow-xs"
+        >
+          Ver Info ℹ️
+        </button>
       </div>
 
       {/* Feature Cards Grid */}
@@ -140,7 +162,7 @@ export default function Landing({ onIniciar }: Props) {
           onClick={onIniciar}
           className="btn-primary flex w-full items-center justify-center gap-2 py-4 text-lg font-bold shadow-lg transition-transform active:scale-[0.99]"
         >
-          <span>Iniciar Entrenamiento</span>
+          <span>Ingresar a Entrenar</span>
           <IconoFlechaDerecha className="h-5 w-5 text-emerald-400" />
         </button>
 
@@ -148,7 +170,45 @@ export default function Landing({ onIniciar }: Props) {
           Compatible con cualquier navegador móvil en iOS y Android. Se puede instalar como PWA.
         </p>
       </div>
+
+      {/* MODAL INFORMATIVO CLUBES */}
+      {modalClubAbierto && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-xs">
+          <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-xl space-y-4">
+            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-2xl">🏆</span>
+                <h2 className="font-heading text-lg font-bold uppercase text-slate-900">GateRight para Clubes & Equipos</h2>
+              </div>
+              <button onClick={() => setModalClubAbierto(false)} className="cursor-pointer text-slate-400 hover:text-slate-600 font-bold text-lg p-1">✕</button>
+            </div>
+
+            <div className="space-y-3 text-xs text-slate-600">
+              <p className="text-sm font-semibold text-slate-900">
+                Solución integral para escuelas de BMX y entrenadores de pista:
+              </p>
+              <ul className="space-y-2 list-disc list-inside">
+                <li><strong className="text-slate-900">Locución por Voz Sintética (TTS):</strong> Conecta tu celular a la pista y anuncia las mangas automáticamente por los parlantes.</li>
+                <li><strong className="text-slate-900">Grilla de 8 Carriles:</strong> Sortea y organiza a tus atletas en los 8 carriles oficiales de la grilla UCI.</li>
+                <li><strong className="text-slate-900">Programación Semanal:</strong> Publica la agenda de entrenamientos y rutinas de la semana para tu equipo.</li>
+                <li><strong className="text-slate-900">Código de Invitación:</strong> Cada club recibe un código único (ej. `RAPT-5821`) para vincular a sus atletas.</li>
+              </ul>
+            </div>
+
+            <div className="pt-2">
+              <button
+                onClick={() => {
+                  setModalClubAbierto(false);
+                  onIniciar();
+                }}
+                className="btn-primary w-full py-3 font-bold text-sm shadow-md"
+              >
+                Ir a Iniciar Sesión / Registrarme
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-
