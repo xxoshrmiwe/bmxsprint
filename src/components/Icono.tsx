@@ -155,3 +155,30 @@ export function IconoBasura({ className }: Props) {
   );
 }
 
+export function IconoUsuario({ className }: Props) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
+      <circle cx="12" cy="7" r="4" />
+    </svg>
+  );
+}
+
+export function IconoTelefono({ className }: Props) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <rect x="5" y="2" width="14" height="20" rx="3" />
+      <path d="M12 18h.01" />
+    </svg>
+  );
+}
+
+export function IconoFlechaDerecha({ className }: Props) {
+  return (
+    <svg {...base} className={className} aria-hidden="true">
+      <path d="M5 12h14M12 5l7 7-7 7" />
+    </svg>
+  );
+}
+
+
