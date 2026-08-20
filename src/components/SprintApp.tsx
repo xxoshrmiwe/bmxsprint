@@ -148,7 +148,6 @@ export default function SprintApp() {
             onNuevaSesion={() => setVista({ tipo: 'nueva-sesion', corredor: vista.corredor })}
             onHistorial={() => setVista({ tipo: 'historial', corredor: vista.corredor })}
             onExportarImportar={() => setVista({ tipo: 'exportar-importar', corredor: vista.corredor })}
-            onIrAClub={() => setVista({ tipo: 'club', corredor: vista.corredor })}
             onCerrarSesion={() => setVista({ tipo: 'acceso' })}
           />
         );
