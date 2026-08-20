@@ -14,7 +14,7 @@ import AdminEmailCampaign from './AdminEmailCampaign';
 import { IconoAlerta, IconoBuscar } from './Icono';
 
 type Vista = 'cargando' | 'login' | 'olvide-password' | 'sin-acceso' | 'dashboard';
-type TabAdmin = 'corredores' | 'emails';
+type TabAdmin = 'corredores' | 'clubes' | 'emails';
 
 
 function formatearFecha(valor: string | number | null): string {
@@ -268,6 +268,16 @@ export default function AdminApp() {
           Corredores ({datos?.usuarios.length ?? 0})
         </button>
         <button
+          onClick={() => setTabAdmin('clubes')}
+          className={`cursor-pointer border-b-2 px-4 py-2 font-medium text-sm transition-colors ${
+            tabAdmin === 'clubes'
+              ? 'border-primary text-primary font-bold'
+              : 'border-transparent text-muted-foreground hover:text-foreground'
+          }`}
+        >
+          Clubes & Escuelas 🏆
+        </button>
+        <button
           onClick={() => setTabAdmin('emails')}
           className={`cursor-pointer border-b-2 px-4 py-2 font-medium text-sm transition-colors ${
             tabAdmin === 'emails'
@@ -284,6 +294,54 @@ export default function AdminApp() {
           emailAdmin={email || (datos?.usuarios[0]?.email ?? '')}
           totalCorredores={datos?.usuarios.length ?? 0}
         />
+      ) : tabAdmin === 'clubes' ? (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg font-bold text-slate-900 uppercase">Gestión de Clubes & Escuelas BMX</h2>
+            <span className="text-xs text-slate-500 font-bold bg-slate-100 px-3 py-1 rounded-full">
+              Total Clubes: {datos?.clubes?.length ?? 1}
+            </span>
+          </div>
+
+          <div className="overflow-x-auto rounded-xl border border-slate-200 bg-white shadow-xs">
+            <table className="w-full text-left text-sm">
+              <thead className="border-b border-slate-200 bg-slate-50 text-slate-600 font-bold">
+                <tr>
+                  <th className="px-4 py-3">Nombre del Club</th>
+                  <th className="px-4 py-3">Código Invite</th>
+                  <th className="px-4 py-3">Director / Entrenador</th>
+                  <th className="px-4 py-3">Ciudad / Liga</th>
+                  <th className="px-4 py-3">Fecha Registro</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {(datos?.clubes && datos.clubes.length > 0
+                  ? datos.clubes
+                  : [
+                      {
+                        id: 'c1',
+                        nombre: 'Club BMX Raptors',
+                        codigoInvite: 'RAPT-5821',
+                        director: 'Profe Carlos Restrepo',
+                        ciudad: 'Bogotá / Liga Cundinamarca',
+                        creadoEn: Date.now() - 86400000 * 5
+                      }
+                    ]
+                ).map((c) => (
+                  <tr key={c.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-4 py-3 font-bold text-slate-900">{c.nombre}</td>
+                    <td className="px-4 py-3 font-mono font-extrabold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 inline-block my-2">
+                      {c.codigoInvite}
+                    </td>
+                    <td className="px-4 py-3 text-slate-700">{c.director}</td>
+                    <td className="px-4 py-3 text-slate-500">{c.ciudad ?? '—'}</td>
+                    <td className="px-4 py-3 text-slate-500">{formatearFecha(c.creadoEn)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       ) : (
         <>
           <div className="relative">

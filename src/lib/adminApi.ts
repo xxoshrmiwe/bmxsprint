@@ -27,9 +27,19 @@ export interface ResumenAdmin {
   sesionesUltimos7Dias: number;
 }
 
+export interface ClubAdmin {
+  id: string;
+  nombre: string;
+  codigoInvite: string;
+  director: string;
+  ciudad?: string;
+  creadoEn: number;
+}
+
 export interface DatosAdmin {
   usuarios: UsuarioAdmin[];
   resumen: ResumenAdmin;
+  clubes?: ClubAdmin[];
 }
 
 export async function obtenerDatosAdmin(): Promise<DatosAdmin> {
